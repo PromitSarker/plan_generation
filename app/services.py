@@ -37,7 +37,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
     },
     "financial_highlights": {
         "type": "json",
-        "description": "5 years of key financial metrics. DO NOT JUST PUT THE NUMBERS AS IN THE EXAMPLE. PROVIDE REALISTIC NUMERICAL DATAS.",
+        "description": "5 years of key financial metrics following Italian accounting standards (OIC). Provide realistic numerical data with interpretive commentary on trends and performance indicators.",
         "schema": [{"year": "int", "revenue": "float", "net_income": "float", "capex": "float", "debt_repayment": "float"}],
         "example": [
             {"year": 1, "revenue": 250000, "net_income": 30, "capex": 50000, "debt_repayment": 10000},
@@ -47,7 +47,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
     },
     "cash_flow_analysis": {
         "type": "json",
-        "description": "5 years of cash flow statement following standard format. DO NOT JUST PUT THE NUMBERS AS IN THE EXAMPLE. PROVIDE REALISTIC NUMERICAL DATAS.",
+        "description": "5 years of cash flow statement following Italian GAAP standards (OIC) with proper Italian terminology: Flusso di Cassa Operativo, Flusso di Cassa Investimenti, Flusso di Cassa Finanziario. Include interpretive commentary on cash flow trends.",
         "schema": [{"year": "int", "operating": "float", "investing": "float", "financing": "float", "net_cash": "float"}],
         "example": [
             {"year": 1, "operating": 80000, "investing": -50000, "financing": 10000, "net_cash": 40000},
@@ -57,7 +57,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
     },
     "profit_and_loss_projection": {
         "type": "json",
-        "description": "5 years of profit & loss statement with detailed breakdown. DO NOT JUST PUT THE NUMBERS AS IN THE EXAMPLE. PROVIDE REALISTIC NUMERICAL DATAS.",
+        "description": "5 years of profit & loss statement with detailed breakdown following Italian accounting principles. Include interpretive commentary on margins, profitability trends, and key performance indicators.",
         "schema": [{"year": "int", "revenue": "float", "cogs": "float", "gross_profit": "float", "operating_expenses": "float", "ebitda": "float", "depreciation_amortization": "float", "ebit": "float", "interest": "float", "taxes": "float", "net_income": "float"}],
         "example": [
             {"year": 1, "revenue": 250000, "cogs": 100000, "gross_profit": 150000, "operating_expenses": 120000, "ebitda": 30000, "depreciation_amortization": 5000, "ebit": 25000, "interest": 2000, "taxes": 3000, "net_income": 30000},
@@ -67,7 +67,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
     },
     "balance_sheet": {
         "type": "json",
-        "description": "5 years of balance sheet with detailed breakdown. DO NOT JUST PUT THE NUMBERS AS IN THE EXAMPLE. PROVIDE REALISTIC NUMERICAL DATAS.",
+        "description": "5 years of balance sheet following Italian accounting standards (Stato Patrimoniale) with proper Italian structure: Attività (Current/Non-Current), Passività (Current/Non-Current), Patrimonio Netto. Include interpretive commentary on financial position and ratios.",
         "schema": [{"year": "int", "assets": "float", "current_assets": "float", "non_current_assets": "float", "liabilities": "float", "current_liabilities": "float", "non_current_liabilities": "float", "equity": "float"}],
         "example": [
             {"year": 1, "assets": 300000, "current_assets": 150000, "non_current_assets": 150000, "liabilities": 200000, "current_liabilities": 100000, "non_current_liabilities": 100000, "equity": 100000},
@@ -77,7 +77,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
     },
     "net_financial_position": {
         "type": "json",
-        "description": "5 years of net financial position. DO NOT JUST PUT THE NUMBERS AS IN THE EXAMPLE. PROVIDE REALISTIC NUMERICAL DATAS.",
+        "description": "5 years of net financial position (Posizione Finanziaria Netta) following Italian accounting standards. Include interpretive commentary on liquidity and financial stability.",
         "schema": [{"year": "int", "net_position": "float"}],
         "example": [
             {"year": 1, "net_position": -50000},
@@ -87,7 +87,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
     },
     "debt_structure": {
         "type": "json",
-        "description": "5 years of debt structure and repayment schedule. DO NOT JUST PUT THE NUMBERS AS IN THE EXAMPLE. PROVIDE REALISTIC NUMERICAL DATAS.",
+        "description": "5 years of debt structure and repayment schedule following Italian banking standards. Include interpretive commentary on debt management and cost of capital.",
         "schema": [{"year": "int", "repayment": "float", "interest_rate": "float", "outstanding_debt": "float"}],
         "example": [
             {"year": 1, "repayment": 10000, "interest_rate": 4.5, "outstanding_debt": 100000},
@@ -97,7 +97,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
     },
     "key_ratios": {
         "type": "json",
-        "description": "5 years of key financial ratios. DO NOT JUST PUT THE NUMBERS AS IN THE EXAMPLE. PROVIDE REALISTIC NUMERICAL DATAS.",
+        "description": "5 years of key financial ratios following Italian financial analysis standards. Include interpretive commentary on ratio trends and industry comparisons.",
         "schema": [{"year": "int", "roi": "float", "roe": "float", "debt_to_equity": "float", "gross_margin": "float", "ebitda_margin": "float", "net_margin": "float", "current_ratio": "float", "quick_ratio": "float", "asset_turnover": "float"}],
         "example": [
             {"year": 1, "roi": 12.5, "roe": 15.2, "debt_to_equity": 2.0, "gross_margin": 60.0, "ebitda_margin": 12.0, "net_margin": 12.0, "current_ratio": 1.5, "quick_ratio": 1.2, "asset_turnover": 0.83},
@@ -106,186 +106,202 @@ INDIVIDUAL_SECTION_SCHEMAS = {
         ]
     },
     "operating_cost_breakdown": {
-    "type": "json",
-    "description": "5 years of comprehensive operating cost breakdown following Italian GAAP (OIC standards) and D.Lgs. 127/91 requirements, with extensive numerical analysis specific to Italian business environment. Include quarterly breakdown reflecting Italian seasonal business patterns, cost growth rates accounting for Italian inflation trends, variance analysis using Italian industry benchmarks, and operational KPIs relevant to Italian market conditions. Provide detailed subcategory metrics with percentage changes based on Italian labor costs (including 13th/14th month salaries, TFR contributions, INPS/INAIL contributions), Italian tax structure (IRES, IRAP), regional business costs variations across Northern/Central/Southern Italy, and compliance with Italian employment regulations. Factor in Italian-specific costs like commercialista fees, camera di commercio fees, regional tax variations, and sector-specific Italian regulations. DO NOT JUST PUT THE NUMBERS AS IN THE EXAMPLE. PROVIDE REALISTIC NUMERICAL DATAS.",
-
-    "schema": [
-        {
-            "year": "int",
-            "revenue": "float",
-            "cogs": "float",
-            "employee_costs": "float",
-            "marketing": "float", 
-            "rent": "float",
-            "administration": "float",
-            "amortization": "float",
-            "other_expenses": "float",
-            "interest_expenses": "float",
-            "tax": "float",
-            "quarterly_breakdown": {
-                "q1_revenue": "float",
-                "q2_revenue": "float", 
-                "q3_revenue": "float",
-                "q4_revenue": "float",
-                "q1_costs": "float",
-                "q2_costs": "float",
-                "q3_costs": "float", 
-                "q4_costs": "float"
-            },
-            "employee_analytics": {
-                "management_costs": "float",
-                "operations_staff": "float",
-                "sales_team": "float",
-                "avg_salary_per_employee": "float",
-                "total_headcount": "int",
-                "cost_per_employee": "float",
-                "productivity_ratio": "float",
-                "overtime_costs": "float",
-                "benefits_percentage": "float"
-            },
-            "marketing_analytics": {
-                "digital_marketing": "float",
-                "traditional_marketing": "float",
-                "events_conferences": "float",
-                "content_creation": "float",
-                "paid_advertising": "float",
-                "cost_per_acquisition": "float",
-                "marketing_roi": "float",
-                "lead_generation_cost": "float",
-                "conversion_cost": "float"
-            },
-            "operational_metrics": {
-                "cost_per_unit_sold": "float",
-                "variable_cost_ratio": "float",
-                "fixed_cost_coverage": "float",
-                "operational_leverage": "float",
-                "cost_efficiency_index": "float",
-                "break_even_units": "int",
-                "capacity_utilization": "float"
-            },
-            "cost_percentages": {
-                "cogs_percent": "float",
-                "employee_percent": "float", 
-                "marketing_percent": "float",
-                "rent_percent": "float",
-                "admin_percent": "float",
-                "other_percent": "float"
-            },
-            "variance_analysis": {
-                "budget_vs_actual_variance": "float",
-                "yoy_cost_growth_rate": "float",
-                "cost_inflation_impact": "float",
-                "efficiency_improvement": "float",
-                "cost_per_revenue_ratio": "float"
-            },
-            "benchmarking_ratios": {
-                "industry_avg_cogs": "float",
-                "employee_cost_benchmark": "float",
-                "marketing_spend_benchmark": "float",
-                "admin_cost_benchmark": "float"
+        "type": "json",
+        "description": "5 years of comprehensive operating cost breakdown following Italian GAAP (OIC standards) and D.Lgs. 127/91 requirements. Include Italian-specific costs and quarterly breakdowns with interpretive commentary on cost efficiency and optimization opportunities.",
+        "schema": [
+            {
+                "year": "int",
+                "revenue": "float",
+                "cogs": "float",
+                "employee_costs": "float",
+                "marketing": "float", 
+                "rent": "float",
+                "administration": "float",
+                "amortization": "float",
+                "other_expenses": "float",
+                "interest_expenses": "float",
+                "tax": "float",
+                "quarterly_breakdown": {
+                    "q1_revenue": "float",
+                    "q2_revenue": "float", 
+                    "q3_revenue": "float",
+                    "q4_revenue": "float",
+                    "q1_costs": "float",
+                    "q2_costs": "float",
+                    "q3_costs": "float", 
+                    "q4_costs": "float"
+                },
+                "employee_analytics": {
+                    "management_costs": "float",
+                    "operations_staff": "float",
+                    "sales_team": "float",
+                    "avg_salary_per_employee": "float",
+                    "total_headcount": "int",
+                    "cost_per_employee": "float",
+                    "productivity_ratio": "float",
+                    "overtime_costs": "float",
+                    "benefits_percentage": "float"
+                },
+                "marketing_analytics": {
+                    "digital_marketing": "float",
+                    "traditional_marketing": "float",
+                    "events_conferences": "float",
+                    "content_creation": "float",
+                    "paid_advertising": "float",
+                    "cost_per_acquisition": "float",
+                    "marketing_roi": "float",
+                    "lead_generation_cost": "float",
+                    "conversion_cost": "float"
+                },
+                "operational_metrics": {
+                    "cost_per_unit_sold": "float",
+                    "variable_cost_ratio": "float",
+                    "fixed_cost_coverage": "float",
+                    "operational_leverage": "float",
+                    "cost_efficiency_index": "float",
+                    "break_even_units": "int",
+                    "capacity_utilization": "float"
+                },
+                "cost_percentages": {
+                    "cogs_percent": "float",
+                    "employee_percent": "float", 
+                    "marketing_percent": "float",
+                    "rent_percent": "float",
+                    "admin_percent": "float",
+                    "other_percent": "float"
+                },
+                "variance_analysis": {
+                    "budget_vs_actual_variance": "float",
+                    "yoy_cost_growth_rate": "float",
+                    "cost_inflation_impact": "float",
+                    "efficiency_improvement": "float",
+                    "cost_per_revenue_ratio": "float"
+                },
+                "benchmarking_ratios": {
+                    "industry_avg_cogs": "float",
+                    "employee_cost_benchmark": "float",
+                    "marketing_spend_benchmark": "float",
+                    "admin_cost_benchmark": "float"
+                }
             }
-        }
-    ],
-    "example": [
-        {
-            "year": 1,
-            "revenue": 250000,
-            "cogs": 100000,
-            "employee_costs": 80000,
-            "marketing": 20000,
-            "rent": 15000,
-            "administration": 10000,
-            "amortization": 5000,
-            "other_expenses": 5000,
-            "interest_expenses": 2000,
-            "tax": 3000,
-            "quarterly_breakdown": {
-                "q1_revenue": 50000,
-                "q2_revenue": 60000,
-                "q3_revenue": 65000,
-                "q4_revenue": 75000,
-                "q1_costs": 45000,
-                "q2_costs": 52000,
-                "q3_costs": 58000,
-                "q4_costs": 65000
-            },
-            "employee_analytics": {
-                "management_costs": 35000,
-                "operations_staff": 30000,
-                "sales_team": 15000,
-                "avg_salary_per_employee": 53333,
-                "total_headcount": 5,
-                "cost_per_employee": 16000,
-                "productivity_ratio": 50000,
-                "overtime_costs": 2500,
-                "benefits_percentage": 15.0
-            },
-            "marketing_analytics": {
-                "digital_marketing": 12000,
-                "traditional_marketing": 4000,
-                "events_conferences": 2000,
-                "content_creation": 1500,
-                "paid_advertising": 8000,
-                "cost_per_acquisition": 125,
-                "marketing_roi": 12.5,
-                "lead_generation_cost": 45,
-                "conversion_cost": 85
-            },
-            "operational_metrics": {
-                "cost_per_unit_sold": 95,
-                "variable_cost_ratio": 0.48,
-                "fixed_cost_coverage": 1.8,
-                "operational_leverage": 2.2,
-                "cost_efficiency_index": 0.88,
-                "break_even_units": 1750,
-                "capacity_utilization": 0.72
-            },
-            "cost_percentages": {
-                "cogs_percent": 40.0,
-                "employee_percent": 32.0,
-                "marketing_percent": 8.0,
-                "rent_percent": 6.0,
-                "admin_percent": 4.0,
-                "other_percent": 10.0
-            },
-            "variance_analysis": {
-                "budget_vs_actual_variance": -5.2,
-                "yoy_cost_growth_rate": 0.0,
-                "cost_inflation_impact": 2.1,
-                "efficiency_improvement": 0.0,
-                "cost_per_revenue_ratio": 0.88
-            },
-            "benchmarking_ratios": {
-                "industry_avg_cogs": 42.0,
-                "employee_cost_benchmark": 35.0,
-                "marketing_spend_benchmark": 10.0,
-                "admin_cost_benchmark": 5.5
+        ],
+        "example": [
+            {
+                "year": 1,
+                "revenue": 250000,
+                "cogs": 100000,
+                "employee_costs": 80000,
+                "marketing": 20000,
+                "rent": 15000,
+                "administration": 10000,
+                "amortization": 5000,
+                "other_expenses": 5000,
+                "interest_expenses": 2000,
+                "tax": 3000,
+                "quarterly_breakdown": {
+                    "q1_revenue": 50000,
+                    "q2_revenue": 60000,
+                    "q3_revenue": 65000,
+                    "q4_revenue": 75000,
+                    "q1_costs": 45000,
+                    "q2_costs": 52000,
+                    "q3_costs": 58000,
+                    "q4_costs": 65000
+                },
+                "employee_analytics": {
+                    "management_costs": 35000,
+                    "operations_staff": 30000,
+                    "sales_team": 15000,
+                    "avg_salary_per_employee": 53333,
+                    "total_headcount": 5,
+                    "cost_per_employee": 16000,
+                    "productivity_ratio": 50000,
+                    "overtime_costs": 2500,
+                    "benefits_percentage": 15.0
+                },
+                "marketing_analytics": {
+                    "digital_marketing": 12000,
+                    "traditional_marketing": 4000,
+                    "events_conferences": 2000,
+                    "content_creation": 1500,
+                    "paid_advertising": 8000,
+                    "cost_per_acquisition": 125,
+                    "marketing_roi": 12.5,
+                    "lead_generation_cost": 45,
+                    "conversion_cost": 85
+                },
+                "operational_metrics": {
+                    "cost_per_unit_sold": 95,
+                    "variable_cost_ratio": 0.48,
+                    "fixed_cost_coverage": 1.8,
+                    "operational_leverage": 2.2,
+                    "cost_efficiency_index": 0.88,
+                    "break_even_units": 1750,
+                    "capacity_utilization": 0.72
+                },
+                "cost_percentages": {
+                    "cogs_percent": 40.0,
+                    "employee_percent": 32.0,
+                    "marketing_percent": 8.0,
+                    "rent_percent": 6.0,
+                    "admin_percent": 4.0,
+                    "other_percent": 10.0
+                },
+                "variance_analysis": {
+                    "budget_vs_actual_variance": -5.2,
+                    "yoy_cost_growth_rate": 0.0,
+                    "cost_inflation_impact": 2.1,
+                    "efficiency_improvement": 0.0,
+                    "cost_per_revenue_ratio": 0.88
+                },
+                "benchmarking_ratios": {
+                    "industry_avg_cogs": 42.0,
+                    "employee_cost_benchmark": 35.0,
+                    "marketing_spend_benchmark": 10.0,
+                    "admin_cost_benchmark": 5.5
+                }
             }
-        }
-    ]
-},
-    "sector_strategy": {
-        "type": "string",
-        "description": "Provide a detailed strategy outlining how the company will operate within its specific industry sector. This should include analysis of current sector trends, competitive landscape, regulatory environment, key success factors, and how the business will position itself to gain a competitive advantage over time.",
-        "min_words": 300
+        ]
     },
-    "funding_sources": {
-        "type": "string",
-        "description": "Explain in detail  all current and future funding sources, including but not limited to equity investment, loans, grants, crowdfunding, or internal cash flow. Specify amounts, stages of funding, potential investors or lenders, and how the funds will be allocated within the business.",
-        "min_words": 300
-    },
-    "operations_plan": {
-        "type": "string",
-        "description": "Describe in depth the company's operation plan, and any strategic moves. Include what the business will do to execute its strategy, including any strategic partnerships, collaborations, or acquisitions. Explain how the business will manage risks and opportunities, and how it will adapt to changing market conditions.",
-        "min_words": 300
-    },
-    # NEW SECTIONS BASED ON WAYNE SRL EXAMPLE
     "financial_analysis": {
         "type": "json",
-        "description": "Comprehensive Italian financial analysis following Wayne SRL example structure. Include detailed breakdown of financial position, cash flow analysis, and key Italian financial metrics. Follow Italian GAAP standards and D.Lgs. 127/91 requirements.",
+        "description": "Comprehensive Italian financial analysis following Wayne SRL example structure with Italian GAAP standards and D.Lgs. 127/91 requirements. Include interpretive commentary on financial performance and position.",
         "schema": [
-  {
-    "year": 2023,
+            {
+                "year": "int",
+                "gross_operating_cash_flow": "float",
+                "working_capital_change": "float",
+                "current_management_cash_flow": "float",
+                "operating_cash_flow": "float",
+                "debt_service_cash_flow": "float",
+                "shareholders_cash_flow": "float",
+                "net_cash_flow": "float",
+                "sales_revenue": "float",
+                "production_value": "float",
+                "gross_operating_margin": "float",
+                "ebit": "float",
+                "ebt": "float",
+                "net_income": "float",
+                "dividends": "float",
+                "net_tangible_assets": "float",
+                "net_intangible_assets": "float",
+                "financial_assets": "float",
+                "trade_assets": "float",
+                "inventory": "float",
+                "deferred_liquidity": "float",
+                "immediate_liquidity": "float",
+                "equity": "float",
+                "long_term_debt": "float",
+                "short_term_debt": "float",
+                "net_financial_position": "float",
+                "mortgage_loans": "float",
+                "other_financial_debts": "float",
+                "cash_and_banks": "float"
+            }
+        ],
+        "example": [
+            {
+                "year": 2023,
                 "gross_operating_cash_flow": 94739,
                 "working_capital_change": 18872,
                 "current_management_cash_flow": 113611,
@@ -314,62 +330,29 @@ INDIVIDUAL_SECTION_SCHEMAS = {
                 "mortgage_loans": 400000,
                 "other_financial_debts": 36500,
                 "cash_and_banks": -112826
-  }
-],
-        "example": [
-            {
-  "year": 2023,
-  "gross_operating_cash_flow": 94739,
-  "working_capital_change": 18872,
-  "current_management_cash_flow": 113611,
-  "operating_cash_flow": -286389,
-  "debt_service_cash_flow": -287988,
-  "shareholders_cash_flow": 112012,
-  "net_cash_flow": 112012,
-  "sales_revenue": 1405366,
-  "production_value": 1405366,
-  "gross_operating_margin": 130774,
-  "ebit": 129157,
-  "ebt": 127053,
-  "net_income": 91523,
-  "dividends": 0,
-  "net_tangible_assets": 405516,
-  "net_intangible_assets": 475,
-  "financial_assets": 0,
-  "trade_assets": 0,
-  "inventory": 0,
-  "deferred_liquidity": 102204,
-  "immediate_liquidity": 112826,
-  "equity": 167638,
-  "long_term_debt": 430767,
-  "short_term_debt": 22616,
-  "net_financial_position": 323674,
-  "mortgage_loans": 400000,
-  "other_financial_debts": 36500,
-  "cash_and_banks": -112826
             }
         ]
     },
     "ratios_analysis": {
         "type": "json",
-        "description": "Detailed Italian financial ratios analysis following Wayne SRL example. Include ROI, ROE, ROS, debt ratios, and other key Italian financial indicators.",
+        "description": "Detailed Italian financial ratios analysis following Wayne SRL example with Italian financial indicators and interpretive commentary on ratio performance.",
         "schema": [
             {
-               "year": "int",
-                "roi": "float",                       #Return on Investment
-                "roe": "float",                       #Return on Equity
-                "ros": "float",                       #Return on Sales
-                "ebit_margin": "float",               #EBIT from Operations
-                "net_debt_to_ebitda": "float",        #PFN/MOL
-                "net_debt_to_equity": "float",        #PFN/PN
-                "net_debt_to_revenue": "float",      #PFN/Ricavi
-                "current_ratio": "float",             # Current Assets / Current Liabilities
-                "quick_ratio": "float",               # (CA - Inventory) / CL
-                "debt_to_equity": "float",            #Total Debt / Equity
-                "treasury_margin": "float",           # Margine di Tesoreria
-                "structural_margin": "float",        # Margine di Struttura
-                "net_working_capital": "float",       #Capitale Circolante Netto
-                "altman_z_score": "float" 
+                "year": "int",
+                "roi": "float",
+                "roe": "float",
+                "ros": "float",
+                "ebit_margin": "float",
+                "net_debt_to_ebitda": "float",
+                "net_debt_to_equity": "float",
+                "net_debt_to_revenue": "float",
+                "current_ratio": "float",
+                "quick_ratio": "float",
+                "debt_to_equity": "float",
+                "treasury_margin": "float",
+                "structural_margin": "float",
+                "net_working_capital": "float",
+                "altman_z_score": "float"
             }
         ],
         "example": [
@@ -399,35 +382,36 @@ INDIVIDUAL_SECTION_SCHEMAS = {
     },
     "production_sales_forecast": {
         "type": "json",
-        "description": "Production and sales forecast following Italian market patterns. Include detailed projections for revenue growth, market expansion, and production capacity.",
+        "description": "Production and sales forecast following Italian market patterns with interpretive commentary on growth projections and market trends.",
         "schema": [
             {
-  "year": "int",
-  "sales_revenue": "float",        
-  "revenue_growth": "float",        
-  "units_sold": "int",               
-  "average_price": "float",          
-  "unit_production_cost": "float",   
-  "unit_margin": "float"  
+                "year": "int",
+                "sales_revenue": "float",
+                "revenue_growth": "float",
+                "units_sold": "int",
+                "average_price": "float",
+                "unit_production_cost": "float",
+                "unit_margin": "float"
             }
         ],
         "example": [
             {
-            "year": 2023,
-            "sales_revenue": 1405366,
-            "revenue_growth": 15.0,
-            "units_sold": 10000,
-            "average_price": 140.54,
-            "unit_production_cost": 127.49,
-            "unit_margin": 13.05
+                "year": 2023,
+                "sales_revenue": 1405366,
+                "revenue_growth": 15.0,
+                "units_sold": 10000,
+                "average_price": 140.54,
+                "unit_production_cost": 127.49,
+                "unit_margin": 13.05
             }
         ]
     }
 }
+
 # --------------- INDIVIDUAL SECTION PROMPTS ---------------
 
-def build_individual_section_prompt(section_key: str, language: str = "English", currency: str = "EUR") -> str:
-    """Build a specialized prompt for a single section"""
+def build_individual_section_prompt(section_key: str, language: str = "Italian", currency: str = "EUR") -> str:
+    """Build a specialized prompt for a single section following Italian standards"""
     
     if section_key not in INDIVIDUAL_SECTION_SCHEMAS:
         raise ValueError(f"Unknown section: {section_key}")
@@ -436,64 +420,76 @@ def build_individual_section_prompt(section_key: str, language: str = "English",
     section_type = schema["type"]
     description = schema["description"]
     
+    # Standard disclaimer for all business plans
+    disclaimer = "NOTA: Questo business plan è stato generato automaticamente e deve essere considerato come documento preliminare. Si raccomanda la verifica con un commercialista italiano qualificato prima dell'utilizzo."
+    
     if section_type == "string":
         min_words = schema.get("min_words", 0)
         prompt = f"""
-You are a senior business plan expert. Generate ONLY the {section_key} section for a comprehensive business plan.
+Sei un esperto senior di business plan italiano. Genera SOLAMENTE la sezione {section_key} per un business plan completo.
 
-REQUIREMENTS:
-- Language: {language}
-- Currency: All amounts in {currency}
-- Word Count: Minimum {min_words} words
-- Format: Return ONLY a JSON object with the key "{section_key}" and its content
+REQUISITI:
+- Lingua: {language}
+- Valuta: Tutti gli importi in {currency}
+- Conteggio parole: Minimo {min_words} parole
+- Formato: Restituisci SOLAMENTE un oggetto JSON con la chiave "{section_key}" e il suo contenuto
+- Standard: Segui gli standard contabili italiani (OIC) e D.Lgs. 127/91
 
-SECTION DESCRIPTION: {description}
+DESCRIZIONE SEZIONE: {description}
 
-CRITICAL INSTRUCTIONS:
-1. Output ONLY valid JSON in this exact format: {{"{section_key}": "your content here"}}
-2. The content must be at least {min_words} words
-3. No markdown, no comments, no text outside JSON
-4. Content must be comprehensive and professional
+DISCLAIMER STANDARD: {disclaimer}
 
-Example format:
-{{"{section_key}": "Your detailed content here that meets the word count requirement..."}}
+ISTRUZIONI CRITICHE:
+1. Output SOLAMENTE JSON valido in questo formato esatto: {{"{section_key}": "il tuo contenuto qui"}}
+2. Il contenuto deve essere almeno {min_words} parole
+3. Nessun markdown, nessun commento, nessun testo fuori dal JSON
+4. Il contenuto deve essere completo e professionale
+5. Includi commenti interpretativi sui dati finanziari quando appropriato
+
+Formato esempio:
+{{"{section_key}": "Il tuo contenuto dettagliato qui che soddisfa i requisiti di conteggio parole..."}}
 """
     
-    else:  # array type
+    else:  # JSON type
         example = schema.get("example", [])
         example_json = json.dumps({section_key: example}, indent=2)
         
         prompt = f"""
-You are a senior financial analyst. Generate ONLY the {section_key} section for a comprehensive business plan.
+Sei un analista finanziario senior italiano. Genera SOLAMENTE la sezione {section_key} per un business plan completo.
 
-REQUIREMENTS:
-- Language: {language}
-- Currency: All amounts in {currency}
-- Format: Return ONLY a JSON object with the key "{section_key}" and its array content
-- Financial Standards: Follow Italian D.Lgs. 127/91 (CEE layout)
+REQUISITI:
+- Lingua: Italian
+- Valuta: Tutti gli importi in {currency}
+- Formato: Restituisci SOLAMENTE un oggetto JSON con la chiave "{section_key}" e il suo contenuto array
+- Standard Contabili: Segui gli standard italiani OIC e D.Lgs. 127/91 (layout CEE)
+- Terminologia: Usa terminologia finanziaria italiana standard
 
-SECTION DESCRIPTION: {description}
+DESCRIZIONE SEZIONE: {description}
 
-REQUIRED STRUCTURE:
+DISCLAIMER STANDARD: {disclaimer}
+
+STRUTTURA RICHIESTA:
 {example_json}
 
-CRITICAL INSTRUCTIONS:
-1. Output ONLY valid JSON in the exact format shown above
-2. Generate 5 years of data (year 1, 2, 3, 4, 5)
-3. All financial data must be consistent and realistic
-4. Numbers must follow logical progression
-5. No markdown, no comments, no text outside JSON
-6. PRIORITIZE FRENCH MARKET. LIKE IF IT'S A FOOD INDUSTRY, REMEMBER FOOD COSTS ACCOUNTS FOR ABOUT 25-30% OF REVENUE. 
-7. FOLLOW THE ITALIAN BENCHMARK
+ISTRUZIONI CRITICHE:
+1. Output SOLAMENTE JSON valido nel formato esatto mostrato sopra
+2. Genera 5 anni di dati (anno 1, 2, 3, 4, 5)
+3. Tutti i dati finanziari devono essere consistenti e realistici
+4. I numeri devono seguire una progressione logica
+5. Nessun markdown, nessun commento, nessun testo fuori dal JSON
+6. PRIORITÀ MERCATO ITALIANO
+7. SEGUI I BENCHMARK ITALIANI
+8. USA TERMINOLOGIA CONTABILE ITALIANA CORRETTA
+9. INCLUDE COMMENTI INTERPRETATIVI NEI CAMPI APPROPRIATI
 
-The JSON must have exactly this structure with these field names.
+Il JSON deve avere esattamente questa struttura con questi nomi di campo.
 """
     
     return prompt
 
 # --------------- INDIVIDUAL SECTION CALL FUNCTION ---------------
 
-async def call_individual_section(client, section_key: str, context: str, model: str, language: str = "English", currency: str = "EUR", max_retries: int = 3) -> dict:
+async def call_individual_section(client, section_key: str, context: str, model: str, language: str = "Italian", currency: str = "EUR", max_retries: int = 3) -> dict:
     """Call OpenAI for a single section with specific validation"""
     
     section_prompt = build_individual_section_prompt(section_key, language, currency)
