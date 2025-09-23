@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Request, File, UploadFile, Query
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
-from app.pdf_service import extract_from_multiple_pdfs
+from app.pdf_service import extract_from_multiple_pdfs, extract_text_from_pdf
 
 from app.models import (
     BusinessIdeaInput,

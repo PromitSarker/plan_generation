@@ -1,4 +1,4 @@
-import asyncio
+```````````````````````````````````````````````````````````````````````````````````````````````````````import asyncio
 import json
 from typing import List, Optional, Any, Dict
 import re
@@ -28,12 +28,12 @@ INDIVIDUAL_SECTION_SCHEMAS = {
     },
     "market_analysis": {
         "type": "string",
-        "description": "Provide an analysis of the market: total addressable market (TAM), serviceable available market (SAM), and obtainable market (SOM). Identify competitors, customer segments, market trends, and why the timing is right for this solution.",
+        "description": "Provide an analysis of the market that consist total addressable market (TAM), serviceable available market (SAM), and obtainable market (SOM). Make sure to Identify competitors, customer segments, market trends, and why the timing is right for this solution. Do not create any sub catagory.",
         "min_words": 700
     },
     "business_model": {
         "type": "string",
-        "description": "Explain how the business makes money. Describe primary and secondary revenue streams, customer acquisition strategy, pricing model, cost structure, margins, and how the model scales over time.",
+        "description": "Explain how the business makes money. Describe primary and secondary revenue streams, customer acquisition strategy, pricing model, cost structure, margins, and how the model scales over time. DO NOT ADD SUBSECTIONS OF IT.",
         "min_words": 500
     },
     "marketing_and_sales_strategy": {
@@ -116,14 +116,18 @@ INDIVIDUAL_SECTION_SCHEMAS = {
             }
         ],
         "example": [
-            {
-                "data": [
-                    {"year": 1, "assets": 300000, "current_assets": 150000, "non_current_assets": 150000, "liabilities": 200000, "current_liabilities": 100000, "non_current_liabilities": 100000, "equity": 100000},
-                    {"year": 2, "assets": 450000, "current_assets": 200000, "non_current_assets": 250000, "liabilities": 280000, "current_liabilities": 130000, "non_current_liabilities": 150000, "equity": 170000}
-                ],
-                "analysis": "Il patrimonio netto mostra un rafforzamento progressivo e il rapporto debito/capitale si riduce, segnalando maggiore solidità finanziaria. Gli investimenti in immobilizzazioni aumentano la capacità produttiva."
-            }
-        ]
+    {
+        "data": [
+            {"year": 0, "assets": 150000, "current_assets": 90000, "non_current_assets": 60000, "liabilities": 60000, "current_liabilities": 30000, "non_current_liabilities": 30000, "equity": 90000},
+            {"year": 1, "assets": 160000, "current_assets": 95000, "non_current_assets": 65000, "liabilities": 62000, "current_liabilities": 31000, "non_current_liabilities": 31000, "equity": 98000},
+            {"year": 2, "assets": 170000, "current_assets": 100000, "non_current_assets": 70000, "liabilities": 64000, "current_liabilities": 32000, "non_current_liabilities": 32000, "equity": 106000},
+            {"year": 3, "assets": 180000, "current_assets": 105000, "non_current_assets": 75000, "liabilities": 66000, "current_liabilities": 33000, "non_current_liabilities": 33000, "equity": 114000},
+            {"year": 4, "assets": 190000, "current_assets": 110000, "non_current_assets": 80000, "liabilities": 68000, "current_liabilities": 34000, "non_current_liabilities": 34000, "equity": 122000},
+            {"year": 5, "assets": 200000, "current_assets": 115000, "non_current_assets": 85000, "liabilities": 70000, "current_liabilities": 35000, "non_current_liabilities": 35000, "equity": 130000}
+        ],
+        "analysis": "Il patrimonio netto mostra un rafforzamento progressivo..."
+    }
+]
     },
     "net_financial_position": {
         "type": "json",
@@ -347,8 +351,8 @@ INDIVIDUAL_SECTION_SCHEMAS = {
     },
     "management_team": {
         "type": "string",
-        "description": "Detailed description of the management team following Italian business standards. Include roles, experience, and responsibilities of each key team member.",
-        "min_words": 800
+        "description": "Detailed description about how management team should run. Do not add any sub secttions to it.",
+        "min_words": 400
     }
 }
 
@@ -373,16 +377,51 @@ def clean_json_response(text: str) -> str:
 def fix_common_json_issues(text: str) -> str:
     """Fix common JSON formatting issues in API responses."""
     # Remove trailing commas before } or ]
-    text = re.sub(r',\s*([}\]])', r'\1', text)
-    # Fix unescaped quotes within strings
-    text = re.sub(r'([^\\])"([^"]*?)([^\\])"', r'\1"\2\3"', text)
-    # Fix missing quotes around keys
-    text = re.sub(r'(\w+)\s*:', r'"\1":', text)
-    # Fix boolean values
-    text = text.replace(': true', ': true').replace(': false', ': false').replace(': null', ': null')
-    # Ensure proper array formatting
-    text = re.sub(r',\s*]', ']', text)
-    text = re.sub(r',\s*}', '}', text)
+    text = re.sub(r':\s*(\d{1,3}(?:,\d{3})+)', lambda m: ': ' + m.group(1).replace(',', ''), text)
+
+     # Remove currency symbols
+    text = re.sub(r'€(\d+)', r'\1', text)
+    text = re.sub(r'"€([^"]*)"', r'"\1"', text)
+  
+    # Fix unquoted property names (more comprehensive)
+    text = re.sub(r'(\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:', r'\1"\2":', text)
+    
+    # Fix single quotes to double quotes
+    text = re.sub(r"'([^']*)'", r'"\1"', text)
+    
+    # Fix boolean and null values
+    text = re.sub(r'\btrue\b', 'true', text)
+    text = re.sub(r'\bfalse\b', 'false', text)
+    text = re.sub(r'\bnull\b', 'null', text)
+    
+    # Fix numbers that might have trailing commas
+    text = re.sub(r'(\d+),(\s*[}\]])', r'\1\2', text)
+    
+    # Remove any control characters
+    text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text)
+    
+    return text
+
+def extract_and_fix_json(text: str) -> str:
+    """Extract and fix JSON from potentially malformed text."""
+    # Find the JSON boundaries more precisely
+    brace_count = 0
+    start_pos = -1
+    
+    for i, char in enumerate(text):
+        if char == '{':
+            if start_pos == -1:
+                start_pos = i
+            brace_count += 1
+        elif char == '}':
+            brace_count -= 1
+            if brace_count == 0 and start_pos != -1:
+                json_str = text[start_pos:i+1]
+                # Clean up the extracted JSON
+                json_str = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', json_str)
+                json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
+                return json_str
+    
     return text
 
 def robust_json_load(text: str) -> dict:
@@ -390,14 +429,15 @@ def robust_json_load(text: str) -> dict:
     if not text or not text.strip():
         return {}
     
-    text = clean_json_response(text)
+    # First try to extract clean JSON
+    text = extract_and_fix_json(text.strip())
     
     strategies = [
         lambda: json.loads(text),
-        lambda: json.loads(re.search(r'\{.*\}', text, re.DOTALL).group(0)),
-        lambda: json.loads(re.search(r'\[.*\]', text, re.DOTALL).group(0)),
         lambda: json.loads(fix_common_json_issues(text)),
         lambda: json.loads(text.replace("'", '"')),
+        lambda: json.loads(re.sub(r'(\w+):', r'"\1":', text)),  # Fix unquoted keys
+        lambda: json.loads(re.sub(r',\s*}', '}', re.sub(r',\s*]', ']', text))),  # Remove trailing commas
     ]
     
     for i, strategy in enumerate(strategies):
@@ -409,45 +449,107 @@ def robust_json_load(text: str) -> dict:
             logger.warning(f"Strategy {i + 1} failed: {e}")
             continue
     
-    # Final fallback
-    try:
-        start_brace = text.find('{')
-        start_bracket = text.find('[')
-        
-        if start_brace != -1 and (start_bracket == -1 or start_brace < start_bracket):
-            end_brace = text.rfind('}')
-            if end_brace != -1 and end_brace > start_brace:
-                json_str = text[start_brace:end_brace + 1]
-                return json.loads(fix_common_json_issues(json_str))
-        elif start_bracket != -1:
-            end_bracket = text.rfind(']')
-            if end_bracket != -1 and end_bracket > start_bracket:
-                json_str = text[start_bracket:end_bracket + 1]
-                return {list(INDIVIDUAL_SECTION_SCHEMAS.keys())[0]: json.loads(fix_common_json_issues(json_str))}
-    except Exception as e:
-        logger.error(f"Final JSON parsing fallback failed: {e}")
-    
+    # Final fallback - try to manually construct valid JSON
+    logger.error(f"All JSON parsing strategies failed. Text sample: {text[:500]}")
     raise ValueError(f"Could not parse JSON from response: {text[:200]}...")
 
-def ensure_6_years(section_content: List[Dict], recent_data: Dict = None) -> List[Dict]:
-    """Ensure exactly 6 years of data for numerical sections."""
-    if not isinstance(section_content, list):
-        section_content = []
+def ensure_6_years(section_content: Any, recent_data: Dict = None) -> List[Dict]:
+    """Ensure exactly one object with 6 years of data for numerical sections."""
+    
+    # Handle the case where OpenAI returns the wrong structure
+    if isinstance(section_content, list):
+        if len(section_content) > 0 and isinstance(section_content[0], dict):
+            if 'data' in section_content[0]:
+                # Already correct structure - return first item only
+                section_content = section_content[0]
+            else:
+                # Raw data array - wrap it
+                section_content = {"data": section_content}
+        else:
+            # Empty or malformed - create empty structure
+            section_content = {"data": []}
+    elif isinstance(section_content, dict):
+        if 'data' not in section_content:
+            # Assume it's raw data
+            section_content = {"data": [section_content] if section_content else []}
+    else:
+        # Not expected format
+        section_content = {"data": []}
 
-    # Override Year 0 with recent_data if provided
-    if recent_data and section_content:
-        if isinstance(section_content[0], dict):
-            section_content[0].update(recent_data)
-    elif recent_data and not section_content:
-        section_content.append({**recent_data, "year": 0})
-
-    # Fill remaining years
-    while len(section_content) < 6:
-        last_year = section_content[-1].copy() if section_content else {"year": len(section_content)}
-        last_year["year"] = len(section_content)
-        section_content.append(last_year)
-
-    return section_content[:6]
+    # Ensure we have exactly 6 years in the data array
+    data_array = section_content.get("data", [])
+    
+    # If we have no data, create empty structure for 6 years
+    if not data_array:
+        for year in range(6):
+            data_array.append({"year": year})
+    else:
+        # Fill missing years 0-5 with realistic projections
+        years_present = {item.get("year", -1) for item in data_array if isinstance(item, dict)}
+        
+        for year in range(6):  # Years 0-5
+            if year not in years_present:
+                # Create projected data based on previous years
+                if year == 0 and recent_data:
+                    # Use recent data for year 0
+                    new_year_data = {**recent_data, "year": year}
+                elif data_array:
+                    # Find the closest previous year to base projections on
+                    previous_years = [item for item in data_array if item.get("year", -1) < year]
+                    if previous_years:
+                        # Use the most recent previous year as template
+                        template = max(previous_years, key=lambda x: x.get("year", 0)).copy()
+                        
+                        # Apply growth factors based on year difference
+                        year_diff = year - template.get("year", 0)
+                        growth_factor = 1.0 + (0.15 * year_diff)  # 15% annual growth
+                        
+                        # Update numeric fields with growth projections
+                        for key, value in template.items():
+                            if isinstance(value, (int, float)) and key != "year":
+                                if "rate" in key.lower() or "ratio" in key.lower():
+                                    # Keep rates and ratios relatively stable
+                                    template[key] = round(value * (1.0 + (0.02 * year_diff)), 2)
+                                elif "margin" in key.lower():
+                                    # Slight margin improvement
+                                    template[key] = round(value * (1.0 + (0.05 * year_diff)), 2)
+                                elif value > 0:
+                                    # Apply growth to positive values
+                                    template[key] = round(value * growth_factor, 2)
+                                elif value < 0:
+                                    # Apply growth to negative values (expenses, etc.)
+                                    template[key] = round(value * growth_factor, 2)
+                        
+                        template["year"] = year
+                        new_year_data = template
+                    else:
+                        # No previous data, create minimal structure
+                        new_year_data = {"year": year}
+                else:
+                    # Minimal structure
+                    new_year_data = {"year": year}
+                
+                data_array.append(new_year_data)
+    
+    # Sort by year and keep only 6 years
+    data_array = sorted([item for item in data_array if isinstance(item, dict)], 
+                       key=lambda x: x.get("year", 0))[:6]
+    
+    # Ensure all years 0-5 are present and in order
+    final_data_array = []
+    for year in range(6):
+        year_data = next((item for item in data_array if item.get("year") == year), None)
+        if year_data:
+            final_data_array.append(year_data)
+        else:
+            # Create empty data for missing year
+            final_data_array.append({"year": year})
+    
+    # Return single object with data array and analysis
+    return [{
+        "data": final_data_array,
+        "analysis": section_content.get("analysis", f"Financial analysis covering 6-year projection (Years 0-5). Year 0 represents current data, Years 1-5 are projections based on realistic growth assumptions.")
+    }]
 
 def create_empty_individual_section(section_key: str) -> dict:
     """Create empty section content based on section type."""
@@ -521,7 +623,7 @@ ISTRUZIONI CRITICHE:
 - Mantieni tutte le chiavi JSON in INGLESE
 - Output SOLAMENTE JSON valido
 - Anno 0 DEVE riflettere i dati correnti
-- Numeri consistenti e realistici
+- Numeri SENZA virgole o simboli (es: 15000 NON 15,000 o €15,000)
 - Nessun testo fuori dal JSON
 - Priorità mercato italiano
 """
@@ -547,7 +649,7 @@ async def call_individual_section(
                 messages=messages,
                 model=model,
                 temperature=0.1,
-                max_tokens=8000
+                max_tokens=12000
             )
             
             content = response.choices[0].message.content.strip()
@@ -564,8 +666,27 @@ async def call_individual_section(
 
             # Validate and process content based on type
             if schema["type"] == "string":
-                if not isinstance(section_content, str) or len(section_content.strip()) < 50:
-                    raise ValueError(f"Invalid string content for {section_key}")
+                if isinstance(section_content, dict):
+                    # If we got a dict instead of string, convert it to plain text
+                    section_content = " ".join([str(value) for value in section_content.values() if value])
+                elif isinstance(section_content, list):
+                    # If we got a list, join all elements into a string
+                    section_content = " ".join([str(item) for item in section_content if item])
+                elif not isinstance(section_content, str):
+                    section_content = str(section_content) if section_content else ""
+                
+                # Remove any JSON-like structure from the text
+                section_content = re.sub(r'^{.*?"([^"]+)":\s*"([^"]*)"', r'\2', section_content)
+                section_content = re.sub(r'"\s*}\s*$', '', section_content)
+                
+                # Check word count instead of character count
+                min_words = schema.get("min_words", 50)
+                word_count = len(section_content.split())
+                
+                if word_count < min_words:
+                    logger.warning(f"Content too short for {section_key}: {word_count} words, need {min_words}")
+                    if word_count == 0:
+                        raise ValueError(f"Empty content for {section_key}")
             else:
                 section_content = ensure_6_years(section_content, recent_data)
                 result[section_key] = section_content
@@ -614,9 +735,15 @@ async def generate_business_plan(
     uploaded_json = {}
     if uploaded_file:
         try:
-            uploaded_json = json.loads(uploaded_file)
-        except:
-            logger.warning("Could not parse uploaded file as JSON")
+            if isinstance(uploaded_file, str):
+                uploaded_json = json.loads(uploaded_file)
+            elif isinstance(uploaded_file, list):
+                # Handle list of files
+                for file_data in uploaded_file:
+                    if isinstance(file_data, dict):
+                        uploaded_json.update(file_data)
+        except Exception as e:
+            logger.warning(f"Could not parse uploaded file as JSON: {e}")
 
     # Generate sections concurrently
     tasks = []
