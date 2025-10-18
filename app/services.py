@@ -786,6 +786,7 @@ STRUTTURA:
 ISTRUZIONI CRITICHE:
 - Anno 0 DEVE utilizzare i dati reali forniti ESATTAMENTE
 - Crescita annuale: 10-30% massimo (NON 100%+)
+- MAKE SURE EVERY COST DATA IS IN K , NOTHING IN MILLION (M)
 - Revenue DEVE essere > COGS sempre
 - Net Income DEVE essere < Revenue
 - Total Assets = Liabilities + Equity (OBBLIGATORIO)
@@ -989,7 +990,6 @@ async def generate_business_plan(
         "net_financial_position",       # Uses Balance Sheet
         "debt_structure",               # Uses Balance Sheet
         "key_ratios",                   # Uses all financial data
-        "operating_cost_breakdown",     # Detailed P&L breakdown
         "financial_analysis",           # Wayne SRL style analysis
         "ratios_analysis",              # Advanced ratios
         "production_sales_forecast"     # Sales projections
@@ -1010,11 +1010,13 @@ async def generate_business_plan(
             # For financial sections, include previous financial sections as context
             if section_key in ["balance_sheet", "cash_flow_analysis", "financial_highlights", 
                               "net_financial_position", "debt_structure", "key_ratios",
-                              "operating_cost_breakdown", "financial_analysis", 
+                               "financial_analysis", 
                               "ratios_analysis", "production_sales_forecast"]:
+                # Only pass previous sections that are structured (list/dict) to avoid strings
                 recent_data["previous_sections"] = {
-                    k: v for k, v in merged_plan.items() 
+                    k: v for k, v in merged_plan.items()
                     if k in ["profit_and_loss_projection", "balance_sheet", "cash_flow_analysis"]
+                    and isinstance(v, (dict, list))
                 }
             
             # Generate section
