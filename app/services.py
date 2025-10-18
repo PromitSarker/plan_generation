@@ -1,4 +1,4 @@
-```````````````````````````````````````````````````````````````````````````````````````````````````````import asyncio
+import asyncio
 import json
 from typing import List, Optional, Any, Dict
 import re
@@ -29,7 +29,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
     "market_analysis": {
         "type": "string",
         "description": "Provide an analysis of the market that consist total addressable market (TAM), serviceable available market (SAM), and obtainable market (SOM). Make sure to Identify competitors, customer segments, market trends, and why the timing is right for this solution. Do not create any sub catagory.",
-        "min_words": 700
+        "min_words": 500
     },
     "business_model": {
         "type": "string",
@@ -89,7 +89,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
     },
     "profit_and_loss_projection": {
         "type": "json",
-        "description": "6 years of profit & loss statement (Year 0 = current data, Years 1-5 = projections) with detailed breakdown following Italian accounting principles.",
+        "description": "6 years of profit & loss statement (Year 0 = current data from the provided input, Years 1-5 = projections) with detailed breakdown following Italian accounting principles.",
         "schema": [
             {
                 "data": [{"year": "int", "revenue": "float", "cogs": "float", "gross_profit": "float", "operating_expenses": "float", "ebitda": "float", "depreciation_amortization": "float", "ebit": "float", "interest": "float", "taxes": "float", "net_income": "float"}],
@@ -453,7 +453,7 @@ def robust_json_load(text: str) -> dict:
     logger.error(f"All JSON parsing strategies failed. Text sample: {text[:500]}")
     raise ValueError(f"Could not parse JSON from response: {text[:200]}...")
 
-def ensure_6_years(section_content: Any, recent_data: Dict = None) -> List[Dict]:
+def ensure_6_years(section_content: Any, recent_data: Dict = None, section_key: str = None) -> List[Dict]:
     """Ensure exactly one object with 6 years of data for numerical sections."""
     
     # Handle the case where OpenAI returns the wrong structure
@@ -464,35 +464,100 @@ def ensure_6_years(section_content: Any, recent_data: Dict = None) -> List[Dict]
                 section_content = section_content[0]
             else:
                 # Raw data array - wrap it
-                section_content = {"data": section_content}
+                section_content = {"data": section_content, "analysis": ""}
         else:
             # Empty or malformed - create empty structure
-            section_content = {"data": []}
+            section_content = {"data": [], "analysis": ""}
     elif isinstance(section_content, dict):
         if 'data' not in section_content:
             # Assume it's raw data
-            section_content = {"data": [section_content] if section_content else []}
+            section_content = {"data": [section_content] if section_content else [], "analysis": ""}
     else:
         # Not expected format
-        section_content = {"data": []}
+        section_content = {"data": [], "analysis": ""}
 
     # Ensure we have exactly 6 years in the data array
     data_array = section_content.get("data", [])
     
-    # If we have no data, create empty structure for 6 years
+    # Extract Year 0 data from uploaded file if available
+    year_0_template = {}
+    if recent_data:
+        # Handle financial_data from PDF extraction
+        if "financial_data" in recent_data:
+            financial_data = recent_data["financial_data"]
+            year_0_template = {
+                "year": 0,
+                "revenue": financial_data.get("total_revenue", 0),
+                "net_income": financial_data.get("net_income", 0),
+                "assets": financial_data.get("total_assets", 0),
+                "liabilities": financial_data.get("total_liabilities", 0),
+                "equity": financial_data.get("equity", 0)
+            }
+        
+        # Handle previous_sections from sequential generation
+        elif "previous_sections" in recent_data and section_key:
+            prev_sections = recent_data["previous_sections"]
+            
+            # Extract Year 0 from P&L for other financial sections
+            if "profit_and_loss_projection" in prev_sections:
+                pl_data = prev_sections["profit_and_loss_projection"]
+                if isinstance(pl_data, list) and len(pl_data) > 0:
+                    pl_year_0 = next((item for item in pl_data[0].get("data", []) if item.get("year") == 0), None)
+                    if pl_year_0:
+                        year_0_template.update({
+                            "year": 0,
+                            "revenue": pl_year_0.get("revenue", 0),
+                            "net_income": pl_year_0.get("net_income", 0),
+                            "cogs": pl_year_0.get("cogs", 0),
+                            "gross_profit": pl_year_0.get("gross_profit", 0),
+                            "ebit": pl_year_0.get("ebit", 0)
+                        })
+            
+            # Extract Year 0 from Balance Sheet for cash flow
+            if "balance_sheet" in prev_sections and section_key == "cash_flow_analysis":
+                bs_data = prev_sections["balance_sheet"]
+                if isinstance(bs_data, list) and len(bs_data) > 0:
+                    bs_year_0 = next((item for item in bs_data[0].get("data", []) if item.get("year") == 0), None)
+                    if bs_year_0:
+                        year_0_template.update({
+                            "assets": bs_year_0.get("assets", 0),
+                            "liabilities": bs_year_0.get("liabilities", 0),
+                            "equity": bs_year_0.get("equity", 0)
+                        })
+    
+    # If we have no data, create structure for 6 years with Year 0 from template
     if not data_array:
         for year in range(6):
-            data_array.append({"year": year})
+            if year == 0 and year_0_template:
+                data_array.append(year_0_template)
+            else:
+                data_array.append({"year": year})
     else:
-        # Fill missing years 0-5 with realistic projections
+        # Force Year 0 to use uploaded/previous data if available
+        year_0_exists = False
+        for i, item in enumerate(data_array):
+            if isinstance(item, dict) and item.get("year") == 0:
+                year_0_exists = True
+                if year_0_template:
+                    # Merge uploaded data with generated data, prioritizing uploaded
+                    for key, value in year_0_template.items():
+                        if value and value != 0:  # Only override with real data
+                            data_array[i][key] = value
+                break
+        
+        # If Year 0 doesn't exist but we have template, add it
+        if not year_0_exists and year_0_template:
+            data_array.append(year_0_template)
+        
+        # Fill missing years 1-5 with realistic projections
         years_present = {item.get("year", -1) for item in data_array if isinstance(item, dict)}
         
         for year in range(6):  # Years 0-5
             if year not in years_present:
                 # Create projected data based on previous years
-                if year == 0 and recent_data:
-                    # Use recent data for year 0
-                    new_year_data = {**recent_data, "year": year}
+                if year == 0 and year_0_template:
+                    # Use template data for year 0
+                    data_array.append(year_0_template)
                 elif data_array:
                     # Find the closest previous year to base projections on
                     previous_years = [item for item in data_array if item.get("year", -1) < year]
@@ -502,23 +567,38 @@ def ensure_6_years(section_content: Any, recent_data: Dict = None) -> List[Dict]
                         
                         # Apply growth factors based on year difference
                         year_diff = year - template.get("year", 0)
-                        growth_factor = 1.0 + (0.15 * year_diff)  # 15% annual growth
+                        
+                        # Base growth rate (15% annual)
+                        base_growth = 0.15
+                        
+                        # Diminishing growth over time (Year 1: 20%, Year 2: 18%, Year 3: 16%...)
+                        growth_factor = 1.0 + (base_growth * (1.0 - (year * 0.02)))
+                        
+                        # Apply year difference
+                        growth_multiplier = growth_factor ** year_diff
                         
                         # Update numeric fields with growth projections
                         for key, value in template.items():
                             if isinstance(value, (int, float)) and key != "year":
                                 if "rate" in key.lower() or "ratio" in key.lower():
-                                    # Keep rates and ratios relatively stable
+                                    # Keep rates and ratios relatively stable with slight improvement
                                     template[key] = round(value * (1.0 + (0.02 * year_diff)), 2)
                                 elif "margin" in key.lower():
-                                    # Slight margin improvement
-                                    template[key] = round(value * (1.0 + (0.05 * year_diff)), 2)
+                                    # Slight margin improvement capped at 5% growth
+                                    margin_growth = min(0.05 * year_diff, 0.15)
+                                    template[key] = round(value * (1.0 + margin_growth), 2)
+                                elif "debt" in key.lower() and value < 0:
+                                    # Debt reduction over time (paying down)
+                                    reduction_factor = 0.90 ** year_diff  # 10% reduction per year
+                                    template[key] = round(value * reduction_factor, 2)
                                 elif value > 0:
                                     # Apply growth to positive values
-                                    template[key] = round(value * growth_factor, 2)
+                                    template[key] = round(value * growth_multiplier, 2)
                                 elif value < 0:
                                     # Apply growth to negative values (expenses, etc.)
-                                    template[key] = round(value * growth_factor, 2)
+                                    # Expenses grow slower than revenue (efficiency improvement)
+                                    expense_growth = growth_multiplier * 0.85  # 85% of revenue growth
+                                    template[key] = round(value * expense_growth, 2)
                         
                         template["year"] = year
                         new_year_data = template
@@ -540,16 +620,99 @@ def ensure_6_years(section_content: Any, recent_data: Dict = None) -> List[Dict]
     for year in range(6):
         year_data = next((item for item in data_array if item.get("year") == year), None)
         if year_data:
+            # Validate and fix financial relationships
+            year_data = validate_financial_relationships(year_data, section_key)
             final_data_array.append(year_data)
         else:
-            # Create empty data for missing year
-            final_data_array.append({"year": year})
+            # Create empty data for missing year with template if Year 0
+            if year == 0 and year_0_template:
+                final_data_array.append(year_0_template)
+            else:
+                final_data_array.append({"year": year})
+    
+    # Ensure analysis is present
+    analysis = section_content.get("analysis", "")
+    if not analysis:
+        analysis = f"Analisi finanziaria per 6 anni (Anno 0-5). Anno 0 rappresenta i dati correnti, Anni 1-5 sono proiezioni basate su ipotesi di crescita realistiche."
     
     # Return single object with data array and analysis
     return [{
         "data": final_data_array,
-        "analysis": section_content.get("analysis", f"Financial analysis covering 6-year projection (Years 0-5). Year 0 represents current data, Years 1-5 are projections based on realistic growth assumptions.")
+        "analysis": analysis
     }]
+
+
+def validate_financial_relationships(year_data: dict, section_key: str = None) -> dict:
+    """Validate and auto-correct financial relationships within a year's data"""
+    
+    if not section_key:
+        return year_data
+    
+    # Profit & Loss validations
+    if section_key == "profit_and_loss_projection":
+        revenue = year_data.get("revenue", 0)
+        cogs = year_data.get("cogs", 0)
+        
+        # Ensure COGS doesn't exceed revenue (cap at 70%)
+        if cogs > revenue * 0.7:
+            year_data["cogs"] = round(revenue * 0.6, 2)
+            cogs = year_data["cogs"]
+        
+        # Recalculate gross_profit
+        year_data["gross_profit"] = round(revenue - cogs, 2)
+        
+        # Validate operating expenses
+        operating_exp = year_data.get("operating_expenses", 0)
+        if operating_exp > revenue * 0.5:
+            year_data["operating_expenses"] = round(revenue * 0.4, 2)
+        
+        # Recalculate EBITDA
+        year_data["ebitda"] = round(year_data["gross_profit"] - year_data["operating_expenses"], 2)
+        
+        # Ensure net_income is reasonable
+        if year_data.get("net_income", 0) > revenue:
+            year_data["net_income"] = round(year_data.get("ebitda", 0) * 0.7, 2)
+    
+    # Balance Sheet validations
+    elif section_key == "balance_sheet":
+        assets = year_data.get("assets", 0)
+        liabilities = year_data.get("liabilities", 0)
+        equity = year_data.get("equity", 0)
+        
+        # Ensure accounting equation: Assets = Liabilities + Equity
+        calculated_equity = round(assets - liabilities, 2)
+        if abs(calculated_equity - equity) > 1:  # Allow 1 unit rounding error
+            year_data["equity"] = calculated_equity
+        
+        # Validate current vs non-current splits
+        current_assets = year_data.get("current_assets", 0)
+        non_current_assets = year_data.get("non_current_assets", 0)
+        if current_assets + non_current_assets != assets:
+            # Default split: 60% current, 40% non-current
+            year_data["current_assets"] = round(assets * 0.6, 2)
+            year_data["non_current_assets"] = round(assets * 0.4, 2)
+        
+        current_liabilities = year_data.get("current_liabilities", 0)
+        non_current_liabilities = year_data.get("non_current_liabilities", 0)
+        if current_liabilities + non_current_liabilities != liabilities:
+            # Default split: 50% each
+            year_data["current_liabilities"] = round(liabilities * 0.5, 2)
+            year_data["non_current_liabilities"] = round(liabilities * 0.5, 2)
+    
+    # Cash Flow validations
+    elif section_key == "cash_flow_analysis":
+        operating = year_data.get("operating", 0)
+        investing = year_data.get("investing", 0)
+        financing = year_data.get("financing", 0)
+        
+        # Recalculate net_cash
+        year_data["net_cash"] = round(operating + investing + financing, 2)
+        
+        # Investing should typically be negative (outflow)
+        if investing > 0 and operating > 0:
+            year_data["investing"] = round(-operating * 0.3, 2)  # 30% of operating as capex
+    
+    return year_data
 
 def create_empty_individual_section(section_key: str) -> dict:
     """Create empty section content based on section type."""
@@ -619,14 +782,20 @@ DISCLAIMER: {disclaimer}
 STRUTTURA:
 {example_json}
 
+# ADD THESE CONSTRAINTS to financial section prompts:
 ISTRUZIONI CRITICHE:
-- Mantieni tutte le chiavi JSON in INGLESE
-- Output SOLAMENTE JSON valido
-- Anno 0 DEVE riflettere i dati correnti
-- Numeri SENZA virgole o simboli (es: 15000 NON 15,000 o €15,000)
-- Nessun testo fuori dal JSON
-- Priorità mercato italiano
+- Anno 0 DEVE utilizzare i dati reali forniti ESATTAMENTE
+- Crescita annuale: 10-30% massimo (NON 100%+)
+- Revenue DEVE essere > COGS sempre
+- Net Income DEVE essere < Revenue
+- Total Assets = Liabilities + Equity (OBBLIGATORIO)
+- NO numeri casuali - calcolare matematicamente
+- Se Anno 0 revenue=180000, Anno 1 può essere 200000-234000 SOLO
 """
+
+
+
+
 
 # --------------- SECTION GENERATION ---------------
 
@@ -703,6 +872,37 @@ async def call_individual_section(
 
 # --------------- MAIN BUSINESS PLAN GENERATOR ---------------
 
+
+def validate_financial_data(section_key: str, data: List[Dict]) -> bool:
+    """Add to services.py - call before returning from call_individual_section"""
+    
+    if section_key == "profit_and_loss_projection":
+        for item in data[0]["data"]:
+            # Check basic accounting rules
+            if item.get("revenue", 0) < item.get("cogs", 0):
+                return False
+            if item.get("gross_profit", 0) != (item.get("revenue", 0) - item.get("cogs", 0)):
+                return False
+            if item.get("net_income", 0) > item.get("revenue", 0):
+                return False
+    
+    if section_key == "balance_sheet":
+        for item in data[0]["data"]:
+            # Assets must equal Liabilities + Equity
+            assets = item.get("assets", 0)
+            liabilities = item.get("liabilities", 0)
+            equity = item.get("equity", 0)
+            if abs(assets - (liabilities + equity)) > 1:  # Allow 1 unit rounding
+                return False
+    
+    return True
+
+# # In call_individual_section, BEFORE returning:
+# if schema["type"] == "json":
+#     if not validate_financial_data(section_key, section_content):
+#         raise ValueError(f"Financial data validation failed for {section_key}")
+
+
 async def generate_business_plan(
     uploaded_file: Optional[str] = None,
     user_input: List[Any] = None,
@@ -714,65 +914,269 @@ async def generate_business_plan(
     settings = get_settings()
     client = get_openai_client()
 
-    # Process input data
+    # Process input data with smart summarization for large inputs
     business_context = []
     if user_input:
         for item in user_input:
-            if isinstance(item, str) and len(item) > MAX_INPUT_LENGTH:
-                business_context.append(item[:MAX_INPUT_LENGTH] + "...")
+            if isinstance(item, str):
+                if len(item) > MAX_INPUT_LENGTH:
+                    # Summarize large inputs instead of truncating
+                    business_context.append(await summarize_large_input(client, item, settings.model_name))
+                else:
+                    business_context.append(item)
             else:
                 business_context.append(str(item))
 
+    # Build context
     context = "Business Plan Analysis:\n"
     if business_context:
         context += "\n".join([f"- {item}" for item in business_context])
+    
+    # Handle uploaded file
     if uploaded_file:
-        if len(uploaded_file) > MAX_INPUT_LENGTH:
-            uploaded_file = uploaded_file[:MAX_INPUT_LENGTH] + "..."
-        context += f"\nDocument Analysis:\n{uploaded_file}"
+        if isinstance(uploaded_file, str):
+            if len(uploaded_file) > MAX_INPUT_LENGTH:
+                uploaded_file = await summarize_large_input(client, uploaded_file, settings.model_name)
+            context += f"\nDocument Analysis:\n{uploaded_file}"
+        elif isinstance(uploaded_file, list):
+            # Handle multiple files
+            for file_data in uploaded_file:
+                if isinstance(file_data, dict):
+                    file_str = json.dumps(file_data)
+                    if len(file_str) > MAX_INPUT_LENGTH:
+                        file_str = await summarize_large_input(client, file_str, settings.model_name)
+                    context += f"\nDocument Analysis:\n{file_str}"
 
-    # Parse uploaded data
+    # Parse uploaded data to extract financial information
     uploaded_json = {}
     if uploaded_file:
         try:
             if isinstance(uploaded_file, str):
                 uploaded_json = json.loads(uploaded_file)
             elif isinstance(uploaded_file, list):
-                # Handle list of files
+                # Merge multiple files
                 for file_data in uploaded_file:
                     if isinstance(file_data, dict):
                         uploaded_json.update(file_data)
         except Exception as e:
             logger.warning(f"Could not parse uploaded file as JSON: {e}")
 
-    # Generate sections concurrently
-    tasks = []
-    for section_key in INDIVIDUAL_SECTION_SCHEMAS.keys():
-        recent_data = uploaded_json.get(section_key)
-        task = call_individual_section(
-            client, section_key, context, settings.model_name,
-            language=language, currency=currency, recent_data=recent_data
-        )
-        tasks.append((section_key, task))
+    # Extract financial data from uploaded files
+    financial_context = {}
+    if uploaded_json:
+        for key, value in uploaded_json.items():
+            if key == "uploaded_file" and isinstance(value, list):
+                for doc in value:
+                    if isinstance(doc, dict) and "financial_data" in doc:
+                        financial_context["financial_data"] = doc["financial_data"]
+                        break
 
-    # Execute tasks with controlled concurrency
+    # Define section generation order (sequential for dependencies)
+    section_order = [
+        # Text sections first
+        "executive_summary",
+        "business_overview",
+        "market_analysis",
+        "business_model",
+        "marketing_and_sales_strategy",
+        "management_team",
+        
+        # Financial sections in dependency order
+        "profit_and_loss_projection",  # Base financial data
+        "balance_sheet",                # Uses P&L data
+        "cash_flow_analysis",           # Uses P&L + Balance Sheet
+        "financial_highlights",         # Summary of above
+        "net_financial_position",       # Uses Balance Sheet
+        "debt_structure",               # Uses Balance Sheet
+        "key_ratios",                   # Uses all financial data
+        "operating_cost_breakdown",     # Detailed P&L breakdown
+        "financial_analysis",           # Wayne SRL style analysis
+        "ratios_analysis",              # Advanced ratios
+        "production_sales_forecast"     # Sales projections
+    ]
+
+    # Generate sections sequentially with context passing
     merged_plan = {}
-    for section_key, task in tasks:
+    
+    for section_key in section_order:
         try:
-            result = await task
+            logger.info(f"Generating section: {section_key}")
+            
+            # Build recent_data with financial context and previous sections
+            recent_data = {}
+            if financial_context:
+                recent_data.update(financial_context)
+            
+            # For financial sections, include previous financial sections as context
+            if section_key in ["balance_sheet", "cash_flow_analysis", "financial_highlights", 
+                              "net_financial_position", "debt_structure", "key_ratios",
+                              "operating_cost_breakdown", "financial_analysis", 
+                              "ratios_analysis", "production_sales_forecast"]:
+                recent_data["previous_sections"] = {
+                    k: v for k, v in merged_plan.items() 
+                    if k in ["profit_and_loss_projection", "balance_sheet", "cash_flow_analysis"]
+                }
+            
+            # Generate section
+            result = await call_individual_section(
+                client, 
+                section_key, 
+                context, 
+                settings.model_name,
+                language=language, 
+                currency=currency, 
+                recent_data=recent_data
+            )
+            
+            # Validate result
             if isinstance(result, dict) and section_key in result:
-                merged_plan[section_key] = result[section_key]
+                section_content = result[section_key]
+                
+                # Additional validation for financial sections
+                schema = INDIVIDUAL_SECTION_SCHEMAS.get(section_key, {})
+                if schema.get("type") == "json":
+                    # Ensure proper structure
+                    if not isinstance(section_content, list) or len(section_content) == 0:
+                        logger.warning(f"Invalid structure for {section_key}, using fallback")
+                        section_content = create_empty_individual_section(section_key)[section_key]
+                    else:
+                        # Validate financial consistency
+                        if not validate_financial_section(section_key, section_content):
+                            logger.warning(f"Financial validation failed for {section_key}, regenerating...")
+                            # Retry once with stricter prompt
+                            result = await call_individual_section(
+                                client, 
+                                section_key, 
+                                context + "\n\nIMPORTANT: Ensure all financial calculations are mathematically correct.", 
+                                settings.model_name,
+                                language=language, 
+                                currency=currency, 
+                                recent_data=recent_data
+                            )
+                            section_content = result.get(section_key, create_empty_individual_section(section_key)[section_key])
+                
+                merged_plan[section_key] = section_content
+                logger.info(f"Successfully generated {section_key}")
             else:
+                logger.error(f"Invalid result structure for {section_key}")
                 merged_plan[section_key] = create_empty_individual_section(section_key)[section_key]
             
             # Small delay between API calls to avoid rate limiting
-            await asyncio.sleep(1)
+            await asyncio.sleep(1.5)
             
         except Exception as e:
-            logger.error(f"Failed section {section_key}: {e}")
+            logger.error(f"Failed to generate section {section_key}: {e}", exc_info=True)
             merged_plan[section_key] = create_empty_individual_section(section_key)[section_key]
 
     return merged_plan
+
+
+async def summarize_large_input(client, text: str, model: str, max_length: int = 50000) -> str:
+    """Summarize large input text while preserving key information"""
+    if len(text) <= max_length:
+        return text
+    
+    try:
+        summary_prompt = """Summarize this business document for a business plan. 
+Keep ALL numerical data, financial figures, dates, and key facts EXACTLY as stated.
+Focus on: company info, products/services, market data, financials, team, goals.
+Maximum 3000 words."""
+        
+        messages = [
+            {"role": "system", "content": summary_prompt},
+            {"role": "user", "content": text[:80000]}  # Limit to avoid token overflow
+        ]
+        
+        response = await client.chat.completions.create(
+            messages=messages,
+            model=model,
+            temperature=0.1,
+            max_tokens=4000
+        )
+        
+        summary = response.choices[0].message.content.strip()
+        logger.info(f"Summarized large input from {len(text)} to {len(summary)} characters")
+        return summary
+        
+    except Exception as e:
+        logger.error(f"Failed to summarize large input: {e}")
+        # Fallback to truncation if summarization fails
+        return text[:max_length] + "\n\n[Content truncated due to length]"
+
+
+def validate_financial_section(section_key: str, section_content: List[Dict]) -> bool:
+    """Validate financial section data for consistency"""
+    try:
+        if not isinstance(section_content, list) or len(section_content) == 0:
+            return False
+        
+        data_obj = section_content[0]
+        if not isinstance(data_obj, dict) or "data" not in data_obj:
+            return False
+        
+        data_array = data_obj["data"]
+        if not isinstance(data_array, list) or len(data_array) != 6:
+            return False
+        
+        # Validate year sequence
+        years = [item.get("year", -1) for item in data_array]
+        if years != list(range(6)):
+            logger.warning(f"Invalid year sequence in {section_key}: {years}")
+            return False
+        
+        # Section-specific validations
+        if section_key == "profit_and_loss_projection":
+            for item in data_array:
+                revenue = item.get("revenue", 0)
+                cogs = item.get("cogs", 0)
+                net_income = item.get("net_income", 0)
+                
+                # Basic sanity checks
+                if revenue < 0 or cogs < 0:
+                    logger.warning(f"Negative revenue or COGS in year {item.get('year')}")
+                    return False
+                
+                if cogs > revenue:
+                    logger.warning(f"COGS exceeds revenue in year {item.get('year')}")
+                    return False
+                
+                if net_income > revenue:
+                    logger.warning(f"Net income exceeds revenue in year {item.get('year')}")
+                    return False
+        
+        elif section_key == "balance_sheet":
+            for item in data_array:
+                assets = item.get("assets", 0)
+                liabilities = item.get("liabilities", 0)
+                equity = item.get("equity", 0)
+                
+                # Accounting equation: Assets = Liabilities + Equity
+                if abs(assets - (liabilities + equity)) > 100:  # Allow some rounding
+                    logger.warning(f"Balance sheet doesn't balance in year {item.get('year')}: {assets} != {liabilities + equity}")
+                    return False
+                
+                if assets < 0 or liabilities < 0:
+                    logger.warning(f"Negative assets or liabilities in year {item.get('year')}")
+                    return False
+        
+        elif section_key == "cash_flow_analysis":
+            for item in data_array:
+                operating = item.get("operating", 0)
+                investing = item.get("investing", 0)
+                financing = item.get("financing", 0)
+                net_cash = item.get("net_cash", 0)
+                
+                # Net cash should equal sum of components
+                calculated_net = operating + investing + financing
+                if abs(net_cash - calculated_net) > 10:
+                    logger.warning(f"Cash flow doesn't sum correctly in year {item.get('year')}")
+                    return False
+        
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error validating financial section {section_key}: {e}")
+        return False
 
 # --------------- SUGGESTION FUNCTION ---------------
 
