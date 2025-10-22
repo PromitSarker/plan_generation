@@ -16,32 +16,32 @@ DEFAULT_CURRENCY = "EUR"
 
 # --------------- INDIVIDUAL SECTION SCHEMAS ---------------
 INDIVIDUAL_SECTION_SCHEMAS = {
-    "executive_summary": {
+    "executiveSummary": {
         "type": "string",
         "description": "Summarize the overall business opportunity in 300+ words: include the core product or service, the market need it addresses, key team strengths, business traction (if any), and the long-term vision. Highlight why this business matters now.",
         "min_words": 300
     },
-    "business_overview": {
+    "businessOverview": {
         "type": "string", 
         "description": "Describe the company's mission, vision, and founding story. Include when and why it was started, what goals it seeks to achieve, where it is currently based, and what motivates the team behind it.",
         "min_words": 500
     },
-    "market_analysis": {
+    "marketAnalysis": {
         "type": "string",
         "description": "Provide an analysis of the market that consist total addressable market (TAM), serviceable available market (SAM), and obtainable market (SOM). Make sure to Identify competitors, customer segments, market trends, and why the timing is right for this solution. Do not create any sub catagory.",
         "min_words": 500
     },
-    "business_model": {
+    "businessModel": {
         "type": "string",
         "description": "Explain how the business makes money. Describe primary and secondary revenue streams, customer acquisition strategy, pricing model, cost structure, margins, and how the model scales over time. DO NOT ADD SUBSECTIONS OF IT.",
         "min_words": 500
     },
-    "marketing_and_sales_strategy": {
+    "marketingSalesStrategy": {
         "type": "string",
         "description": "Describe how the business plans to go to market. Include positioning, target customers, sales channels (online/offline), customer acquisition cost (CAC) strategies, conversion funnels, and how growth will be driven operationally.",
         "min_words": 500
     },
-    "financial_highlights": {
+    "financialHighlights": {
         "type": "json",
         "description": "6 years of key financial metrics (Year 0 = current/recent data, Years 1-5 = projections) following Italian accounting standards (OIC). Provide realistic `numerical data with interpretive commentary on trends and performance indicators.",
         "schema": [
@@ -64,7 +64,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
             }
         ]
     },
-    "cash_flow_analysis": {
+    "cashFlowAnalysis": {
         "type": "json",
         "description": "6 anni di rendiconto finanziario (Anno 0 = dati correnti, Anni 1-5 = proiezioni) secondo i principi contabili italiani (OIC) con terminologia italiana corretta.",
         "schema": [
@@ -87,7 +87,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
             }
         ]
     },
-    "profit_and_loss_projection": {
+    "profitLossProjection": {
         "type": "json",
         "description": "6 years of profit & loss statement (Year 0 = current data from the provided input, Years 1-5 = projections) with detailed breakdown following Italian accounting principles.",
         "schema": [
@@ -106,7 +106,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
             }
         ]
     },
-    "balance_sheet": {
+    "balanceSheet": {
         "type": "json",
         "description": "6 years of balance sheet following Italian accounting standards (Stato Patrimoniale) with proper Italian structure: Attività (Current/Non-Current), Passività (Current/Non-Current), Patrimonio Netto. Include interpretive commentary on financial position and ratios.",
         "schema": [
@@ -129,7 +129,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
     }
 ]
     },
-    "net_financial_position": {
+    "netFinancialPosition": {
         "type": "json",
         "description": "6 years of net financial position (Posizione Finanziaria Netta) following Italian accounting standards. Include interpretive commentary on liquidity and financial stability.",
         "schema": [
@@ -149,7 +149,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
             }
         ]
     },
-    "debt_structure": {
+    "debtStructure": {
         "type": "json",
         "description": "6 years of debt structure and repayment schedule following Italian banking standards. Include interpretive commentary on debt management and cost of capital.",
         "schema": [
@@ -169,7 +169,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
             }
         ]
     },
-    "key_ratios": {
+    "keyRatios": {
         "type": "json",
         "description": "6 years of key financial ratios following Italian financial analysis standards. Include interpretive commentary on ratio trends and industry comparisons.",
         "schema": [
@@ -188,7 +188,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
             }
         ]
     },
-    "financial_analysis": {
+    "financialAnalysis": {
         "type": "json",
         "description": "Comprehensive Italian financial analysis following Wayne SRL example structure with Italian GAAP standards and D.Lgs. 127/91 requirements. Include interpretive commentary on financial performance and position.",
         "schema": [
@@ -268,7 +268,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
             }
         ]
     },
-    "ratios_analysis": {
+    "ratiosAnalysis": {
         "type": "json",
         "description": "Detailed Italian financial ratios analysis following Wayne SRL example with Italian financial indicators and interpretive commentary on ratio performance.",
         "schema": [
@@ -292,7 +292,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
                         "altman_z_score": "float"
                     }
                 ],
-                "analysis": "Provide a full analysis of the datas within 200 words"
+                "analysis": "Provide a full analysis of the datas within 100 words"
             }
         ],
         "example": [
@@ -320,7 +320,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
             }
         ]
     },
-    "production_sales_forecast": {
+    "productionSalesForecast": {
         "type": "json",
         "description": "Production and sales forecast following Italian market patterns with interpretive commentary on growth projections and market trends.",
         "schema": [
@@ -349,7 +349,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
             }
         ]
     },
-    "management_team": {
+    "managementTeam": {
         "type": "string",
         "description": "Detailed description about how management team should run. Do not add any sub secttions to it.",
         "min_words": 400
@@ -376,31 +376,55 @@ def clean_json_response(text: str) -> str:
 
 def fix_common_json_issues(text: str) -> str:
     """Fix common JSON formatting issues in API responses."""
-    # Remove trailing commas before } or ]
-    text = re.sub(r':\s*(\d{1,3}(?:,\d{3})+)', lambda m: ': ' + m.group(1).replace(',', ''), text)
+    if not text:
+        return text
 
-     # Remove currency symbols
-    text = re.sub(r'€(\d+)', r'\1', text)
-    text = re.sub(r'"€([^"]*)"', r'"\1"', text)
-  
-    # Fix unquoted property names (more comprehensive)
-    text = re.sub(r'(\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:', r'\1"\2":', text)
-    
-    # Fix single quotes to double quotes
-    text = re.sub(r"'([^']*)'", r'"\1"', text)
-    
-    # Fix boolean and null values
-    text = re.sub(r'\btrue\b', 'true', text)
-    text = re.sub(r'\bfalse\b', 'false', text)
-    text = re.sub(r'\bnull\b', 'null', text)
-    
-    # Fix numbers that might have trailing commas
-    text = re.sub(r'(\d+),(\s*[}\]])', r'\1\2', text)
-    
-    # Remove any control characters
+    # Normalize whitespace and remove non-breaking spaces / control chars
+    text = text.replace('\xa0', ' ')
     text = re.sub(r'[\x00-\x1f\x7f-\x9f]', '', text)
-    
-    return text
+
+    # Remove code fences if present
+    text = re.sub(r'^```json\s*', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'\s*```\s*$', '', text, flags=re.IGNORECASE)
+
+    # --- Numeric cleanup ---
+    # Remove underscores used as digit separators (e.g. 10_000 -> 10000)
+    text = re.sub(r'(?<=\d)_(?=\d)', '', text)
+
+    # Remove commas used as thousand separators (e.g. 10,000 -> 10000)
+    text = re.sub(r'(?<=\d),(?=\d)', '', text)
+
+    # Remove dots used as thousand separators (e.g. 10.000 -> 10000)
+    # Only remove dot when it's followed by exactly 3 digits and not more (avoid removing decimal points)
+    text = re.sub(r'(?<=\d)\.(?=\d{3}(?!\d))', '', text)
+
+    # Remove spaces used as thousand separators (including NBSP)
+    text = re.sub(r'(?<=\d)[\s\u00A0](?=\d{3}\b)', '', text)
+
+    # Remove currency symbols adjacent to numbers or inside quotes (e.g. "€10.000" -> 10000)
+    text = re.sub(r'["\']?€\s*([\d\.,_]+)["\']?', r'\1', text)
+    text = re.sub(r'[£$¥]', '', text)
+
+    # Remove grouping commas left before closing brackets/braces
+    text = re.sub(r',\s*([}\]])', r'\1', text)
+
+    # --- Structural fixes ---
+    # Fix unquoted property names
+    text = re.sub(r'(\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:', r'\1"\2":', text)
+
+    # Convert single quotes to double quotes (avoid touching escaped quotes)
+    text = re.sub(r"(?<!\\)'", '"', text)
+
+    # Normalize Python-like literals to JSON
+    text = re.sub(r'\bTrue\b', 'true', text)
+    text = re.sub(r'\bFalse\b', 'false', text)
+    text = re.sub(r'\bNone\b', 'null', text)
+
+    # Clean up any stray commas in numbers or trailing separators
+    text = re.sub(r'(\d),\s*([}\]])', r'\1\2', text)
+    text = re.sub(r',\s*,', ',', text)
+
+    return text.strip()
 
 def extract_and_fix_json(text: str) -> str:
     """Extract and fix JSON from potentially malformed text."""
@@ -499,8 +523,8 @@ def ensure_6_years(section_content: Any, recent_data: Dict = None, section_key: 
             prev_sections = recent_data["previous_sections"]
             
             # Extract Year 0 from P&L for other financial sections
-            if "profit_and_loss_projection" in prev_sections:
-                pl_data = prev_sections["profit_and_loss_projection"]
+            if "profitLossProjection" in prev_sections:
+                pl_data = prev_sections["profitLossProjection"]
                 if isinstance(pl_data, list) and len(pl_data) > 0:
                     pl_year_0 = next((item for item in pl_data[0].get("data", []) if item.get("year") == 0), None)
                     if pl_year_0:
@@ -514,8 +538,8 @@ def ensure_6_years(section_content: Any, recent_data: Dict = None, section_key: 
                         })
             
             # Extract Year 0 from Balance Sheet for cash flow
-            if "balance_sheet" in prev_sections and section_key == "cash_flow_analysis":
-                bs_data = prev_sections["balance_sheet"]
+            if "balanceSheet" in prev_sections and section_key == "cashFlowAnalysis":
+                bs_data = prev_sections["balanceSheet"]
                 if isinstance(bs_data, list) and len(bs_data) > 0:
                     bs_year_0 = next((item for item in bs_data[0].get("data", []) if item.get("year") == 0), None)
                     if bs_year_0:
@@ -649,7 +673,7 @@ def validate_financial_relationships(year_data: dict, section_key: str = None) -
         return year_data
     
     # Profit & Loss validations
-    if section_key == "profit_and_loss_projection":
+    if section_key == "profitLossProjection":
         revenue = year_data.get("revenue", 0)
         cogs = year_data.get("cogs", 0)
         
@@ -674,7 +698,7 @@ def validate_financial_relationships(year_data: dict, section_key: str = None) -
             year_data["net_income"] = round(year_data.get("ebitda", 0) * 0.7, 2)
     
     # Balance Sheet validations
-    elif section_key == "balance_sheet":
+    elif section_key == "balanceSheet":
         assets = year_data.get("assets", 0)
         liabilities = year_data.get("liabilities", 0)
         equity = year_data.get("equity", 0)
@@ -700,7 +724,7 @@ def validate_financial_relationships(year_data: dict, section_key: str = None) -
             year_data["non_current_liabilities"] = round(liabilities * 0.5, 2)
     
     # Cash Flow validations
-    elif section_key == "cash_flow_analysis":
+    elif section_key == "cashFlowAnalysis":
         operating = year_data.get("operating", 0)
         investing = year_data.get("investing", 0)
         financing = year_data.get("financing", 0)
@@ -861,6 +885,17 @@ async def call_individual_section(
                 section_content = ensure_6_years(section_content, recent_data)
                 result[section_key] = section_content
 
+            # --- NORMALIZE localized outputs into expected schema ---
+            section_content = normalize_localized_section(section_key, section_content)
+            # --- END NORMALIZATION ---
+
+            # Additional validation for financial sections
+            schema = INDIVIDUAL_SECTION_SCHEMAS.get(section_key, {})
+            if schema.get("type") == "json":
+                if not validate_financial_data(section_key, section_content):
+                    raise ValueError(f"Financial data validation failed for {section_key}")
+
+
             return result
 
         except Exception as e:
@@ -877,7 +912,7 @@ async def call_individual_section(
 def validate_financial_data(section_key: str, data: List[Dict]) -> bool:
     """Add to services.py - call before returning from call_individual_section"""
     
-    if section_key == "profit_and_loss_projection":
+    if section_key == "profitLossProjection":
         for item in data[0]["data"]:
             # Check basic accounting rules
             if item.get("revenue", 0) < item.get("cogs", 0):
@@ -887,7 +922,11 @@ def validate_financial_data(section_key: str, data: List[Dict]) -> bool:
             if item.get("net_income", 0) > item.get("revenue", 0):
                 return False
     
-    if section_key == "balance_sheet":
+    if section_key == "balanceSheet":
+            return validate_balance_sheet(data)
+
+
+    if section_key == "balanceSheet":
         for item in data[0]["data"]:
             # Assets must equal Liabilities + Equity
             assets = item.get("assets", 0)
@@ -975,24 +1014,24 @@ async def generate_business_plan(
     # Define section generation order (sequential for dependencies)
     section_order = [
         # Text sections first
-        "executive_summary",
-        "business_overview",
-        "market_analysis",
-        "business_model",
-        "marketing_and_sales_strategy",
-        "management_team",
+        "executiveSummary",
+        "businessOverview",
+        "marketAnalysis",
+        "businessModel",
+        "marketingSalesStrategy",
+        "managementTeam",
         
         # Financial sections in dependency order
-        "profit_and_loss_projection",  # Base financial data
-        "balance_sheet",                # Uses P&L data
-        "cash_flow_analysis",           # Uses P&L + Balance Sheet
-        "financial_highlights",         # Summary of above
-        "net_financial_position",       # Uses Balance Sheet
-        "debt_structure",               # Uses Balance Sheet
-        "key_ratios",                   # Uses all financial data
-        "financial_analysis",           # Wayne SRL style analysis
-        "ratios_analysis",              # Advanced ratios
-        "production_sales_forecast"     # Sales projections
+        "profitLossProjection",  # Base financial data
+        "balanceSheet",                # Uses P&L data
+        "cashFlowAnalysis",           # Uses P&L + Balance Sheet
+        "financialHighlights",         # Summary of above
+        "netFinancialPosition",       # Uses Balance Sheet
+        "debtStructure",               # Uses Balance Sheet
+        "keyRatios",                   # Uses all financial data
+        "financialAnalysis",           # Wayne SRL style analysis
+        "ratiosAnalysis",              # Advanced ratios
+        "productionSalesForecast"     # Sales projections
     ]
 
     # Generate sections sequentially with context passing
@@ -1008,14 +1047,14 @@ async def generate_business_plan(
                 recent_data.update(financial_context)
             
             # For financial sections, include previous financial sections as context
-            if section_key in ["balance_sheet", "cash_flow_analysis", "financial_highlights", 
-                              "net_financial_position", "debt_structure", "key_ratios",
-                               "financial_analysis", 
-                              "ratios_analysis", "production_sales_forecast"]:
+            if section_key in ["balanceSheet", "cashFlowAnalysis", "financialHighlights", 
+                              "netFinancialPosition", "debtStructure", "keyRatios",
+                               "financialAnalysis", 
+                              "ratiosAnalysis", "productionSalesForecast"]:
                 # Only pass previous sections that are structured (list/dict) to avoid strings
                 recent_data["previous_sections"] = {
                     k: v for k, v in merged_plan.items()
-                    if k in ["profit_and_loss_projection", "balance_sheet", "cash_flow_analysis"]
+                    if k in ["profitLossProjection", "balanceSheet", "cashFlowAnalysis"]
                     and isinstance(v, (dict, list))
                 }
             
@@ -1034,6 +1073,10 @@ async def generate_business_plan(
             if isinstance(result, dict) and section_key in result:
                 section_content = result[section_key]
                 
+                # --- NORMALIZE localized outputs into expected schema ---
+                section_content = normalize_localized_section(section_key, section_content)
+                # --- END NORMALIZATION ---
+
                 # Additional validation for financial sections
                 schema = INDIVIDUAL_SECTION_SCHEMAS.get(section_key, {})
                 if schema.get("type") == "json":
@@ -1107,84 +1150,106 @@ Maximum 3000 words."""
 
 
 def validate_financial_section(section_key: str, section_content: List[Dict]) -> bool:
-    """Validate financial section data for consistency"""
+    """Enhanced validation with required fields check"""
     try:
-        if not isinstance(section_content, list) or len(section_content) == 0:
+        if not isinstance(section_content, list) or not section_content:
             return False
+            
+        required_fields = {
+            'balanceSheet': ['assets', 'liabilities', 'equity'],
+            'cashFlowAnalysis': ['operating', 'investing', 'financing', 'net_cash'],
+            'financialHighlights': ['revenue', 'net_income', 'capex']
+        }
         
-        data_obj = section_content[0]
-        if not isinstance(data_obj, dict) or "data" not in data_obj:
+        data = section_content[0].get('data', [])
+        if not data:
             return False
-        
-        data_array = data_obj["data"]
-        if not isinstance(data_array, list) or len(data_array) != 6:
-            return False
-        
-        # Validate year sequence
-        years = [item.get("year", -1) for item in data_array]
-        if years != list(range(6)):
-            logger.warning(f"Invalid year sequence in {section_key}: {years}")
-            return False
-        
-        # Section-specific validations
-        if section_key == "profit_and_loss_projection":
-            for item in data_array:
-                revenue = item.get("revenue", 0)
-                cogs = item.get("cogs", 0)
-                net_income = item.get("net_income", 0)
+            
+        # Check required fields
+        fields = required_fields.get(section_key, [])
+        for item in data:
+            if not all(field in item for field in fields):
+                logger.warning(f"Missing required fields in {section_key}")
+                return False
                 
-                # Basic sanity checks
-                if revenue < 0 or cogs < 0:
-                    logger.warning(f"Negative revenue or COGS in year {item.get('year')}")
-                    return False
+            # Ensure no None values
+            if any(item.get(field) is None for field in fields):
+                logger.warning(f"None values found in {section_key}")
+                return False
                 
-                if cogs > revenue:
-                    logger.warning(f"COGS exceeds revenue in year {item.get('year')}")
-                    return False
-                
-                if net_income > revenue:
-                    logger.warning(f"Net income exceeds revenue in year {item.get('year')}")
-                    return False
-        
-        elif section_key == "balance_sheet":
-            for item in data_array:
-                assets = item.get("assets", 0)
-                liabilities = item.get("liabilities", 0)
-                equity = item.get("equity", 0)
-                
-                # Accounting equation: Assets = Liabilities + Equity
-                if abs(assets - (liabilities + equity)) > 100:  # Allow some rounding
-                    logger.warning(f"Balance sheet doesn't balance in year {item.get('year')}: {assets} != {liabilities + equity}")
-                    return False
-                
-                if assets < 0 or liabilities < 0:
-                    logger.warning(f"Negative assets or liabilities in year {item.get('year')}")
-                    return False
-        
-        elif section_key == "cash_flow_analysis":
-            for item in data_array:
-                operating = item.get("operating", 0)
-                investing = item.get("investing", 0)
-                financing = item.get("financing", 0)
-                net_cash = item.get("net_cash", 0)
-                
-                # Net cash should equal sum of components
-                calculated_net = operating + investing + financing
-                if abs(net_cash - calculated_net) > 10:
-                    logger.warning(f"Cash flow doesn't sum correctly in year {item.get('year')}")
-                    return False
-        
         return True
         
     except Exception as e:
-        logger.error(f"Error validating financial section {section_key}: {e}")
+        logger.error(f"Validation error in {section_key}: {e}")
         return False
+
+
+# Add to services.py after the validate_financial_section function
+
+def validate_balance_sheet(data: List[Dict]) -> bool:
+    """
+    Validates balance sheet data ensuring:
+    1. Assets = Liabilities + Equity
+    2. All required fields are present and non-negative
+    3. Sub-components add up correctly
+    """
+    try:
+        if not isinstance(data, list) or not data:
+            return False
+
+        for item in data[0].get('data', []):
+            # Check required fields existence
+            required_fields = ['assets', 'liabilities', 'equity', 'year']
+            if not all(field in item for field in required_fields):
+                logger.warning(f"Missing required fields in balance sheet for year {item.get('year')}")
+                return False
+
+            # Ensure values are numbers and non-None
+            for field in required_fields:
+                if not isinstance(item.get(field), (int, float)):
+                    logger.warning(f"Invalid {field} value in balance sheet: {item.get(field)}")
+                    return False
+
+            # Verify accounting equation: Assets = Liabilities + Equity
+            assets = float(item['assets'])
+            liabilities = float(item['liabilities'])
+            equity = float(item['equity'])
+            
+            # Allow for small rounding differences (0.01 or 1% tolerance)
+            tolerance = max(0.01, assets * 0.01)
+            if abs(assets - (liabilities + equity)) > tolerance:
+                logger.warning(f"Balance sheet equation doesn't balance for year {item['year']}")
+                logger.warning(f"Assets: {assets}, Liabilities: {liabilities}, Equity: {equity}")
+                logger.warning(f"Difference: {assets - (liabilities + equity)}")
+                return False
+
+            # Verify sub-components if present
+            if 'current_assets' in item and 'non_current_assets' in item:
+                total_assets = float(item['current_assets']) + float(item['non_current_assets'])
+                if abs(total_assets - assets) > tolerance:
+                    logger.warning(f"Assets components don't sum correctly in year {item['year']}")
+                    return False
+
+            if 'current_liabilities' in item and 'non_current_liabilities' in item:
+                total_liabilities = float(item['current_liabilities']) + float(item['non_current_liabilities'])
+                if abs(total_liabilities - liabilities) > tolerance:
+                    logger.warning(f"Liabilities components don't sum correctly in year {item['year']}")
+                    return False
+
+    except Exception as e:
+        logger.error(f"Balance sheet validation error: {e}")
+        return False
+
+    return True
+
+
 
 # --------------- SUGGESTION FUNCTION ---------------
 
 SUGGESTION_PROMPT = """
 You are an expert business plan consultant. Generate 4 different possible professional answers for the following business plan question. 
 Keep each answer concise (Less than 10 words).
+MAKE SURE ALL IS IN ITALIAN LANGUAGE.
 Return the answers in a clean JSON array format.
 
 Question: {question}
@@ -1229,3 +1294,63 @@ async def generate_suggestions(question: str) -> List[str]:
             "Applying for business loans",
             "Crowdfunding campaign"
         ]
+
+def normalize_localized_section(section_key: str, section_content: Any) -> Any:
+    """Normalize localized/nested outputs into expected schema shapes."""
+    if not section_content:
+        return section_content
+
+    # Normalize balanceSheet Italian nested structure to expected flat keys
+    if section_key == "balanceSheet" and isinstance(section_content, list):
+        try:
+            obj = section_content[0]
+            data = obj.get("data", [])
+            new_data = []
+            for item in data:
+                if not isinstance(item, dict):
+                    new_data.append(item); continue
+
+                # If nested italian keys exist, map them
+                # expected: assets, current_assets, non_current_assets, liabilities, current_liabilities, non_current_liabilities, equity
+                mapped = {}
+                mapped["year"] = item.get("year", item.get("anno", None))
+
+                # handle nested "attivita" / "passivita" / "patrimonio_netto"
+                att = item.get("attivita") or item.get("attività") or item.get("assets")
+                if isinstance(att, dict):
+                    mapped["current_assets"] = att.get("correnti") or att.get("corrente") or att.get("current_assets") or att.get("currentAsset")
+                    mapped["non_current_assets"] = att.get("non_correnti") or att.get("nonCorrenti") or att.get("non_current_assets")
+                    mapped["assets"] = att.get("totale") or att.get("totale_attivita") or att.get("totale") or att.get("assets")
+                else:
+                    # maybe already flat with Italian names
+                    mapped["assets"] = item.get("totale") or item.get("assets") or att
+
+                pas = item.get("passivita") or item.get("passività") or item.get("liabilities")
+                if isinstance(pas, dict):
+                    mapped["current_liabilities"] = pas.get("correnti") or pas.get("corrente") or pas.get("current_liabilities")
+                    mapped["non_current_liabilities"] = pas.get("non_correnti") or pas.get("non_current_liabilities")
+                    mapped["liabilities"] = pas.get("totale") or pas.get("totale_passivita") or pas.get("totale") or pas.get("liabilities")
+                else:
+                    mapped["liabilities"] = item.get("totale_passivita") or item.get("liabilities") or pas
+
+                mapped["equity"] = item.get("patrimonio_netto") or item.get("patrimonio") or item.get("equity")
+
+                # Fallbacks: copy over existing expected keys if present
+                for k in ["assets", "current_assets", "non_current_assets", "liabilities", "current_liabilities", "non_current_liabilities", "equity"]:
+                    if mapped.get(k) is None and k in item:
+                        mapped[k] = item.get(k)
+
+                # ensure numeric types remain numbers (attempt conversion)
+                for k, v in list(mapped.items()):
+                    if isinstance(v, str):
+                        try:
+                            mapped[k] = float(v.replace(',', '').replace(' ', ''))
+                        except Exception:
+                            pass
+
+                new_data.append(mapped)
+            return [{"data": new_data, "analysis": obj.get("analysis", "")}]
+        except Exception:
+            return section_content
+
+    return section_content
