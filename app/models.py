@@ -223,15 +223,6 @@ class RatiosAnalysis(BaseModel):
     net_working_capital: float
     altman_z_score: float
 
-class ProductionSalesForecast(BaseModel):
-    year: int
-    sales_revenue: float
-    revenue_growth: float
-    units_sold: int
-    average_price: float
-    unit_production_cost: float
-    unit_margin: float
-
 # --------------------
 # Core Business Plan Model
 # --------------------
@@ -255,8 +246,6 @@ class BusinessPlan(BaseModel):
     operating_cost_breakdown: List[OperatingCostBreakdown] = []
     financial_analysis: List[FinancialAnalysis] = []
     ratios_analysis: List[RatiosAnalysis] = []
-    production_sales_forecast: List[ProductionSalesForecast] = []
-
 # --------------------
 # PDF & Suggestion Models
 # --------------------
