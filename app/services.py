@@ -2,7 +2,7 @@
 import json
 import logging
 import re
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Tuple
 from app.config import get_openai_client
 from app.pdf_service import extract_text_from_pdf
 
@@ -11,7 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # -------------------------------------------------
-# 1.  SECTION SCHEMAS (unchanged – only shown for completeness)
+# 1. SECTION SCHEMAS
 # -------------------------------------------------
 INDIVIDUAL_SECTION_SCHEMAS = {
     "executiveSummary": {
@@ -59,153 +59,166 @@ INDIVIDUAL_SECTION_SCHEMAS = {
         }
     },
     "cashFlowAnalysis": {
-    "type": "json",
-    "description": "6 years of cash flow statement (Anno 0 = current data, Anni 1-5 = projections) following Italian accounting standards with proper Italian terminology. Include operating, investing, and financing activities with net cash position.",
-    "schema": {
-        "data": [{"year": "int", "operating": "float", "investing": "float", "financing": "float", "net_cash": "float"}],
-        "analysis": "string"
+        "type": "json",
+        "description": "6 years of cash flow statement (Anno 0 = current data, Anni 1-5 = projections) following Italian accounting standards with proper Italian terminology. Include operating, investing, and financing activities with net cash position.",
+        "schema": {
+            "data": [{"year": "int", "operating": "float", "investing": "float", "financing": "float", "net_cash": "float"}],
+            "analysis": "string"
+        },
+        "example": {
+            "data": [
+                {"year": 0, "operating": 60000.0, "investing": -50000.0, "financing": 10000.0, "net_cash": 20000.0},
+                {"year": 1, "operating": 69000.0, "investing": -57500.0, "financing": 11000.0, "net_cash": 22500.0},
+                {"year": 2, "operating": 79350.0, "investing": -66125.0, "financing": 12100.0, "net_cash": 25325.0},
+                {"year": 3, "operating": 91252.0, "investing": -76000.0, "financing": 13310.0, "net_cash": 28562.0},
+                {"year": 4, "operating": 104944.0, "investing": -87375.0, "financing": 14641.0, "net_cash": 31410.0},
+                {"year": 5, "operating": 120684.0, "investing": -100000.0, "financing": 16100.0, "net_cash": 36684.0}
+            ],
+            "analysis": "Analisi del flusso di cassa: I flussi operativi mostrano una crescita costante del 15% annuo, sostenuta dalla redditività del business. Gli investimenti rimangono consistenti per lo sviluppo delle immobilizzazioni. I flussi finanziari riflettono il piano di rimborso del debito. La posizione di cassa netta migliora progressivamente ogni anno."
+        }
     },
-    "example": {
-        "data": [
-            {"year": 0, "operating": 60000.0, "investing": -50000.0, "financing": 10000.0, "net_cash": 20000.0},
-            {"year": 1, "operating": 69000.0, "investing": -57500.0, "financing": 11000.0, "net_cash": 22500.0},
-            {"year": 2, "operating": 79350.0, "investing": -66125.0, "financing": 12100.0, "net_cash": 25325.0},
-            {"year": 3, "operating": 91252.0, "investing": -76000.0, "financing": 13310.0, "net_cash": 28562.0},
-            {"year": 4, "operating": 104944.0, "investing": -87375.0, "financing": 14641.0, "net_cash": 31410.0},
-            {"year": 5, "operating": 120684.0, "investing": -100000.0, "financing": 16100.0, "net_cash": 36684.0}
-        ],
-        "analysis": "Analisi del flusso di cassa: I flussi operativi mostrano una crescita costante del 15% annuo, sostenuta dalla redditività del business. Gli investimenti rimangono consistenti per lo sviluppo delle immobilizzazioni. I flussi finanziari riflettono il piano di rimborso del debito. La posizione di cassa netta migliora progressivamente ogni anno."
-    }
-},
     "profitLossProjection": {
         "type": "json",
         "description": "6 years of profit & loss statement (Year 0 = current data from the provided input, Years 1-5 = projections) following the exact Italian accounting format with detailed breakdown. MUST INCLUDE ALL 6 YEARS: Year 0, 1, 2, 3, 4, 5.",
         "schema": {
-        "data": [{"year": "int",
-                "ricavi_vendite_prestazioni": "float",
-                "acquisti_merci": "float",
-                "acquisti_servizi": "float", 
-                "godimento_beni_terzi": "float",
-                "valore_aggiunto": "float",
-                "costi_personale": "float",
-                "margine_operativo_lordo": "float",
-                "ammortamenti_immateriali": "float",
-                "ammortamenti_materiali": "float",
-                "risultato_operativo": "float",
-                "oneri_finanziari": "float",
-                "risultato_prima_imposte": "float",
-                "imposte_reddito": "float",
-                "utile_netto": "float"}],
-        "analysis": "string"
-    },
-    "example": {
-        "data": [
-            {"year": 0, "ricavi_vendite_prestazioni": 0.0, "acquisti_merci": 0.0, "acquisti_servizi": 0.0, "godimento_beni_terzi": 0.0, "valore_aggiunto": 0.0, "costi_personale": 0.0, "margine_operativo_lordo": 0.0, "ammortamenti_immateriali": 0.0, "ammortamenti_materiali": 0.0, "risultato_operativo": 0.0, "oneri_finanziari": 0.0, "risultato_prima_imposte": 0.0, "imposte_reddito": 0.0, "utile_netto": 0.0},
-            {"year": 1, "ricavi_vendite_prestazioni": 1500000.0, "acquisti_merci": 450000.0, "acquisti_servizi": 120000.0, "godimento_beni_terzi": 15000.0, "valore_aggiunto": 915000.0, "costi_personale": 300000.0, "margine_operativo_lordo": 615000.0, "ammortamenti_immateriali": 6000.0, "ammortamenti_materiali": 25800.0, "risultato_operativo": 583200.0, "oneri_finanziari": 5000.0, "risultato_prima_imposte": 578200.0, "imposte_reddito": 140208.0, "utile_netto": 437992.0}
-        ],
-        "analysis": "Analisi del conto economico: L'anno 0 rappresenta la situazione corrente. I ricavi mostrano una crescita costante del 15% annuo. Il valore aggiunto si mantiene stabile attorno al 60-61% dei ricavi, indicando una buona efficienza operativa."
-    }
+            "data": [{"year": "int",
+                    "ricavi_vendite_prestazioni": "float",
+                    "acquisti_merci": "float",
+                    "acquisti_servizi": "float", 
+                    "godimento_beni_terzi": "float",
+                    "valore_aggiunto": "float",
+                    "costi_personale": "float",
+                    "margine_operativo_lordo": "float",
+                    "ammortamenti_immateriali": "float",
+                    "ammortamenti_materiali": "float",
+                    "risultato_operativo": "float",
+                    "oneri_finanziari": "float",
+                    "risultato_prima_imposte": "float",
+                    "imposte_reddito": "float",
+                    "utile_netto": "float"}],
+            "analysis": "string"
+        },
+        "example": {
+            "data": [
+                {"year": 0, "ricavi_vendite_prestazioni": 0.0, "acquisti_merci": 0.0, "acquisti_servizi": 0.0, "godimento_beni_terzi": 0.0, "valore_aggiunto": 0.0, "costi_personale": 0.0, "margine_operativo_lordo": 0.0, "ammortamenti_immateriali": 0.0, "ammortamenti_materiali": 0.0, "risultato_operativo": 0.0, "oneri_finanziari": 0.0, "risultato_prima_imposte": 0.0, "imposte_reddito": 0.0, "utile_netto": 0.0},
+                {"year": 1, "ricavi_vendite_prestazioni": 1500000.0, "acquisti_merci": 450000.0, "acquisti_servizi": 120000.0, "godimento_beni_terzi": 15000.0, "valore_aggiunto": 915000.0, "costi_personale": 300000.0, "margine_operativo_lordo": 615000.0, "ammortamenti_immateriali": 6000.0, "ammortamenti_materiali": 25800.0, "risultato_operativo": 583200.0, "oneri_finanziari": 5000.0, "risultato_prima_imposte": 578200.0, "imposte_reddito": 140208.0, "utile_netto": 437992.0}
+            ],
+            "analysis": "Analisi del conto economico: L'anno 0 rappresenta la situazione corrente. I ricavi mostrano una crescita costante del 15% annuo. Il valore aggiunto si mantiene stabile attorno al 60-61% dei ricavi, indicando una buona efficienza operativa."
+        }
     },
     "balanceSheet": {
-    "type": "json",
-    "description": "6 years of balance sheet following Italian accounting standards (Stato Patrimoniale) with proper Italian structure matching the exact table format: Attività (Fixed/Current), Passività e Patrimonio Netto (Equity/Non-Current/Current Liabilities).",
-    "schema": {
-        "data": [{"year": "int",
-            # ATTIVO - FIXED ASSETS
-            "immobilizzazioni_immateriali": "float",
-            "tot_immob_immateriali_nette": "float",
-            "terreni_e_fabbricati": "float",
-            "impianti_e_macchinari": "float",
-            "attrezzature_arredi_altri_beni": "float",
-            "tot_immob_materiali_nette": "float",
-            "tot_immob_finanziarie": "float",
-            "totale_attivo_fisso": "float",
-            
-            # ATTIVO - CURRENT ASSETS
-            "crediti_commerciali": "float",
-            "disponibilita_liquide": "float",
-            "ratei_risconti_attivi": "float",
-            "totale_attivo_circolante": "float",
-            "totale_attivo": "float",
-            
-            # PASSIVO E PATRIMONIO NETTO
-            "capitale_sociale": "float",
-            "riserve_utili_accantonati": "float",
-            "utile_perdita_esercizio": "float",
-            "patrimonio_netto": "float",
-            "fondo_tfr": "float",
-            "fondi": "float",
-            "debiti_ml_termine_mutuo": "float",
-            "passivita_consolidate": "float",
-            "debiti_vs_fornitori": "float",
-            "debiti_vs_soci": "float",
-            "debiti_vs_erario": "float",
-            "debiti_vs_banche": "float",
-            "totale_debiti_breve_termine": "float",
-            "ratei_risconti_passivi": "float",
-            "passivita_correnti": "float",
-            "totale_passivo": "float"
-        }],
-        "analysis": "string"
+        "type": "json",
+        "description": "6 years of balance sheet following Italian accounting standards (Stato Patrimoniale) with proper Italian structure matching the exact table format: Attività (Fixed/Current), Passività e Patrimonio Netto (Equity/Non-Current/Current Liabilities).",
+        "schema": {
+            "data": [{"year": "int",
+                # ATTIVO - FIXED ASSETS
+                "immobilizzazioni_immateriali": "float",
+                "tot_immob_immateriali_nette": "float",
+                "terreni_e_fabbricati": "float",
+                "impianti_e_macchinari": "float",
+                "attrezzature_arredi_altri_beni": "float",
+                "tot_immob_materiali_nette": "float",
+                "tot_immob_finanziarie": "float",
+                "totale_attivo_fisso": "float",
+                "crediti_clienti": "float",              # Trade receivables (client credits)
+                "debiti_fornitori": "float",             # Trade payables (supplier debts)
+                "debiti_fisco": "float",                 # Tax payables (erario)
+                "debiti_inps": "float",                  # Social security payables
+                "passivita_attive": "float",             # Accruals and deferred income
+                "disponibilita_liquide_inizio": "float", # Opening cash balance
+                "disponibilita_liquide_fine": "float",   # Closing cash balance
+                "fondo_rischi": "float",  
+                # ATTIVO - CURRENT ASSETS
+                "crediti_commerciali": "float",
+                "disponibilita_liquide": "float",
+                "ratei_risconti_attivi": "float",
+                "totale_attivo_circolante": "float",
+                "totale_attivo": "float",
+                # PASSIVO E PATRIMONIO NETTO
+                "capitale_sociale": "float",
+                "riserve_utili_accantonati": "float",
+                "utile_perdita_esercizio": "float",
+                "patrimonio_netto": "float",
+                "fondo_tfr": "float",
+                "fondi": "float",
+                "debiti_ml_termine_mutuo": "float",
+                "passivita_consolidate": "float",
+                "debiti_vs_fornitori": "float",
+                "debiti_vs_soci": "float",
+                "debiti_vs_erario": "float",
+                "debiti_vs_banche": "float",
+                "totale_debiti_breve_termine": "float",
+                "ratei_risconti_passivi": "float",
+                "passivita_correnti": "float",
+                "totale_passivo": "float"
+            }],
+            "analysis": "string"
+        },
+        "example": {
+            "data": [
+                {
+                    "year": 0,
+                    "immobilizzazioni_immateriali": 0.0,
+                    "tot_immob_immateriali_nette": 0.0,
+                    "terreni_e_fabbricati": 0.0,
+                    "impianti_e_macchinari": 0.0,
+                    "attrezzature_arredi_altri_beni": 0.0,
+                    "tot_immob_materiali_nette": 0.0,
+                    "tot_immob_finanziarie": 0.0,
+                    "totale_attivo_fisso": 0.0,
+                    "crediti_commerciali": 0.0,
+                    "disponibilita_liquide": 0.0,
+                    "ratei_risconti_attivi": 0.0,
+                    "totale_attivo_circolante": 0.0,
+                    "totale_attivo": 0.0,
+                    "capitale_sociale": 0.0,
+                    "riserve_utili_accantonati": 0.0,
+                    "utile_perdita_esercizio": 0.0,
+                    "patrimonio_netto": 0.0,
+                    "fondo_tfr": 0.0,
+                    "fondi": 0.0,
+                    "debiti_ml_termine_mutuo": 0.0,
+                    "passivita_consolidate": 0.0,
+                    "debiti_vs_fornitori": 0.0,
+                    "debiti_vs_soci": 0.0,
+                    "debiti_vs_erario": 0.0,
+                    "debiti_vs_banche": 0.0,
+                    "totale_debiti_breve_termine": 0.0,
+                    "ratei_risconti_passivi": 0.0,
+                    "passivita_correnti": 0.0,
+                    "totale_passivo": 0.0,
+                    "crediti_clienti": 0.0,
+                    "debiti_fornitori": 0.0,
+                    "debiti_fisco": 0.0,
+                    "debiti_inps": 0.0,
+                    "passivita_attive": 0.0,
+                    "disponibilita_liquide_inizio": 0.0,
+                    "disponibilita_liquide_fine": 0.0,
+                    "fondo_rischi": 0.0,
+                }
+            ],
+            "analysis": "Analisi dello stato patrimoniale: L'anno 0 rappresenta la situazione iniziale. Il patrimonio netto mostra una crescita costante supportata dalla redditività operativa."
+        }
     },
-    "example": {
-        "data": [
-            {
-                "year": 0,
-                "immobilizzazioni_immateriali": 0.0,
-                "tot_immob_immateriali_nette": 0.0,
-                "terreni_e_fabbricati": 0.0,
-                "impianti_e_macchinari": 0.0,
-                "attrezzature_arredi_altri_beni": 0.0,
-                "tot_immob_materiali_nette": 0.0,
-                "tot_immob_finanziarie": 0.0,
-                "totale_attivo_fisso": 0.0,
-                "crediti_commerciali": 0.0,
-                "disponibilita_liquide": 0.0,
-                "ratei_risconti_attivi": 0.0,
-                "totale_attivo_circolante": 0.0,
-                "totale_attivo": 0.0,
-                "capitale_sociale": 0.0,
-                "riserve_utili_accantonati": 0.0,
-                "utile_perdita_esercizio": 0.0,
-                "patrimonio_netto": 0.0,
-                "fondo_tfr": 0.0,
-                "fondi": 0.0,
-                "debiti_ml_termine_mutuo": 0.0,
-                "passivita_consolidate": 0.0,
-                "debiti_vs_fornitori": 0.0,
-                "debiti_vs_soci": 0.0,
-                "debiti_vs_erario": 0.0,
-                "debiti_vs_banche": 0.0,
-                "totale_debiti_breve_termine": 0.0,
-                "ratei_risconti_passivi": 0.0,
-                "passivita_correnti": 0.0,
-                "totale_passivo": 0.0
-            }
-        ],
-        "analysis": "Analisi dello stato patrimoniale: L'anno 0 rappresenta la situazione iniziale. Il patrimonio netto mostra una crescita costante supportata dalla redditività operativa."
-    }
-},
     "debtStructure": {
-    "type": "json", 
-    "description": "6 years of debt structure and repayment schedule following Italian banking standards with Italian formatting. Include repayment amounts, interest rates, and outstanding debt balance for each year.",
-    "schema": {
-        "data": [{"year": "int", "repayment": "float", "interest_rate": "float", "outstanding_debt": "float"}],
-        "analysis": "string"
+        "type": "json", 
+        "description": "6 years of debt structure and repayment schedule following Italian banking standards with Italian formatting. Include repayment amounts, interest rates, and outstanding debt balance for each year.",
+        "schema": {
+            "data": [{"year": "int", "repayment": "float", "interest_rate": "float", "outstanding_debt": "float"}],
+            "analysis": "string"
+        },
+        "example": {
+            "data": [
+                {"year": 0, "repayment": 10000.0, "interest_rate": 4.5, "outstanding_debt": 36500.0},
+                {"year": 1, "repayment": 11000.0, "interest_rate": 4.2, "outstanding_debt": 25500.0},
+                {"year": 2, "repayment": 12100.0, "interest_rate": 4.0, "outstanding_debt": 13400.0},
+                {"year": 3, "repayment": 13310.0, "interest_rate": 3.8, "outstanding_debt": 0.0},
+                {"year": 4, "repayment": 0.0, "interest_rate": 0.0, "outstanding_debt": 0.0},
+                {"year": 5, "repayment": 0.0, "interest_rate": 0.0, "outstanding_debt": 0.0}
+            ],
+            "analysis": "La struttura del debito mostra un piano di ammortamento progressivo con tassi di interesse decrescenti. Il debito viene completamente estinto entro il terzo anno, riducendo gli oneri finanziari e migliorando la posizione finanziaria netta."
+        }
     },
-    "example": {
-        "data": [
-            {"year": 0, "repayment": 10000.0, "interest_rate": 4.5, "outstanding_debt": 36500.0},
-            {"year": 1, "repayment": 11000.0, "interest_rate": 4.2, "outstanding_debt": 25500.0},
-            {"year": 2, "repayment": 12100.0, "interest_rate": 4.0, "outstanding_debt": 13400.0},
-            {"year": 3, "repayment": 13310.0, "interest_rate": 3.8, "outstanding_debt": 0.0},
-            {"year": 4, "repayment": 0.0, "interest_rate": 0.0, "outstanding_debt": 0.0},
-            {"year": 5, "repayment": 0.0, "interest_rate": 0.0, "outstanding_debt": 0.0}
-        ],
-        "analysis": "La struttura del debito mostra un piano di ammortamento progressivo con tassi di interesse decrescenti. Il debito viene completamente estinto entro il terzo anno, riducendo gli oneri finanziari e migliorando la posizione finanziaria netta."
-    }
-},
-
     "ratiosAnalysis": {
         "type": "json",
         "description": "Detailed Italian financial ratios analysis following Wayne SRL example with Italian financial indicators and interpretive commentary on ratio performance.",
@@ -216,7 +229,7 @@ INDIVIDUAL_SECTION_SCHEMAS = {
         "example": {
             "data": [
                 {"year": 0, "roi": 12.5, "roe": 15.0, "ros": 8.5, "ebit_margin": 10.0, "net_debt_to_ebitda": 3.5, "net_debt_to_equity": 0.55, "net_debt_to_revenue": 0.3, "current_ratio": 1.5, "quick_ratio": 1.2, "debt_to_equity": 0.55, "treasury_margin": 0.25, "structural_margin": 0.45, "net_working_capital": 35000, "altman_z_score": 2.5},
-                {"year": 1, "roi": 15.8, "roe": 18.5, "net_debt_to_equity": 1.65, "gross_margin": 60.0, "ebitda_margin": 20.0, "net_margin": 15.0, "current_ratio": 1.54, "quick_ratio": 1.25, "asset_turnover": 0.89}
+                {"year": 1, "roi": 15.8, "roe": 18.5, "ros": 10.2, "ebit_margin": 12.1, "net_debt_to_ebitda": 2.8, "net_debt_to_equity": 0.45, "net_debt_to_revenue": 0.25, "current_ratio": 1.65, "quick_ratio": 1.35, "debt_to_equity": 0.45, "treasury_margin": 0.3, "structural_margin": 0.5, "net_working_capital": 42000, "altman_z_score": 2.8}
             ],
             "analysis": "Trend positivo dei principali indici: ROI e ROE in aumento, riduzione della leva finanziaria e miglioramento della liquidità."
         }
@@ -228,21 +241,62 @@ INDIVIDUAL_SECTION_SCHEMAS = {
     }
 }
 
-
-
 class FinancialValidator:
     """Validator to force-correct financial calculations according to Italian accounting standards"""
     
     def __init__(self):
         self.ires_tax_rate = 0.24  # 24% Italian corporate tax rate
-
-
+        
+    def enforce_year_0_from_extracted_data(self, financial_data: Dict, extracted_data: Dict) -> Dict:
+        """Ensure Year 0 values match extracted financial data exactly"""
+        if not extracted_data or "data" not in financial_data:
+            return financial_data
+        
+        for record in financial_data["data"]:
+            if record.get("year") == 0:  # Year 0
+                logger.info(f"Enforcing Year 0 values from extracted data: {extracted_data}")
+                
+                # Comprehensive field mapping for all financial sections
+                field_mapping = {
+                    # Common mappings across sections
+                    "ricavi_vendite_prestazioni": ["total_revenue", "revenue", "ricavi"],
+                    "utile_netto": ["net_income", "profit", "risultato_netto"],
+                    "disponibilita_liquide": ["cash_and_banks", "cash", "liquidita"],
+                    
+                    # Balance sheet specific mappings
+                    "totale_attivo": ["total_assets", "assets"],
+                    "patrimonio_netto": ["equity", "capitale_proprio", "patrimonio_netto"],
+                    "debiti_vs_banche": ["total_debt", "bank_debt", "debiti"],
+                    
+                    # Cash flow specific mappings
+                    "operating": ["operating_cash_flow", "operating"],
+                    "investing": ["investing_cash_flow", "investing"],
+                    "financing": ["financing_cash_flow", "financing"],
+                    
+                    # Debt structure mappings
+                    "outstanding_debt": ["total_debt", "outstanding_debt", "posizione_debito"],
+                }
+                
+                # Try to match fields from extracted data
+                for field, possible_names in field_mapping.items():
+                    if field in record:
+                        # Try each possible name in order of priority
+                        for name in possible_names:
+                            if name in extracted_data:
+                                value = extracted_data[name]
+                                if isinstance(value, (int, float)):
+                                    record[field] = round(float(value), 2)
+                                    logger.info(f"Enforced Year 0 {field} = {record[field]} from extracted {name}")
+                                    break  # Use the first match found
+        
+        return financial_data
+    
     def validate_and_fix_financial_analysis(self, financial_analysis_data: Dict) -> Dict:
         """Validate and fix financial analysis calculations according to Italian cash flow standards"""
         try:
             if "data" not in financial_analysis_data:
                 return financial_analysis_data
-                
+            
             fixed_data = []
             previous_cash = 0  # Track cumulative cash position
             
@@ -258,7 +312,7 @@ class FinancialValidator:
         except Exception as e:
             logger.error(f"Error validating financial analysis: {str(e)}")
             return financial_analysis_data
-
+    
     def _fix_single_financial_analysis_record(self, record: Dict, previous_cash: float) -> Dict:
         """Fix calculations for a single financial analysis record"""
         record = record.copy()
@@ -305,20 +359,17 @@ class FinancialValidator:
         # 7. Ensure debt service and shareholder flows are consistent
         if "debt_service_cash_flow" not in record:
             record["debt_service_cash_flow"] = round(record["operating_cash_flow"], 2)
-        
         if "shareholders_cash_flow" not in record:
             record["shareholders_cash_flow"] = round(record["net_cash_flow"], 2)
         
         return record
 
-
-    
     def validate_and_fix_profit_loss(self, profit_loss_data: Dict) -> Dict:
         """Validate and fix profit & loss calculations according to Italian standards"""
         try:
             if "data" not in profit_loss_data:
                 return profit_loss_data
-                
+            
             fixed_data = []
             for record in profit_loss_data["data"]:
                 fixed_record = self._fix_single_profit_loss_record(record)
@@ -331,7 +382,7 @@ class FinancialValidator:
         except Exception as e:
             logger.error(f"Error validating profit loss: {str(e)}")
             return profit_loss_data
-    
+
     def _fix_single_profit_loss_record(self, record: Dict) -> Dict:
         """Fix calculations for a single profit & loss record using exact table structure"""
         record = record.copy()
@@ -373,13 +424,13 @@ class FinancialValidator:
         record["utile_netto"] = round(utile_netto, 2)
         
         return record
-        
+
     def validate_and_fix_balance_sheet(self, balance_sheet_data: Dict) -> Dict:
         """Validate and fix balance sheet calculations using exact PDF formulas"""
         try:
             if "data" not in balance_sheet_data:
                 return balance_sheet_data
-                
+            
             fixed_data = []
             for record in balance_sheet_data["data"]:
                 fixed_record = self._fix_single_balance_sheet_record(record)
@@ -392,86 +443,6 @@ class FinancialValidator:
         except Exception as e:
             logger.error(f"Error validating balance sheet: {str(e)}")
             return balance_sheet_data
-    
-    def _fix_single_balance_sheet_record(self, record: Dict) -> Dict:
-        """Fix calculations for a single balance sheet record using exact PDF formulas"""
-        record = record.copy()
-        
-        # 1. Calculate total_fixed_assets (ATTIVO FISSO NETTO)
-        total_fixed_assets = (
-            record.get("intangible_fixed_assets", 0) +
-            record.get("tangible_fixed_assets", 0) +
-            record.get("financial_fixed_assets", 0)
-        )
-        record["total_fixed_assets"] = round(total_fixed_assets, 2)
-        
-        # 2. Calculate net_operating_current_assets (ATTIVO CIRCOLANTE OPERATIVO NETTO)
-        # Using exact formula from PDF
-        net_operating_current_assets = (
-            record.get("inventory", 0) +
-            record.get("net_receivables_from_clients", 0) +
-            record.get("other_operating_receivables", 0) +
-            record.get("accruals_prepayments_assets", 0) +
-            record.get("suppliers_payables", 0) +  # This is negative in PDF
-            record.get("related_party_payables", 0) +  # This is negative in PDF  
-            record.get("other_operating_payables", 0)  # This is negative in PDF
-        )
-        record["net_operating_current_assets"] = round(net_operating_current_assets, 2)
-        
-        # 3. Calculate total_invested_capital (CAPITALE INVESTITO)
-        total_invested_capital = record["total_fixed_assets"] + record["net_operating_current_assets"]
-        record["total_invested_capital"] = round(total_invested_capital, 2)
-        
-        # 4. Calculate net_invested_capital (CAPITALE INVESTITO NETTO)
-        net_invested_capital = (
-            record["total_invested_capital"] +
-            record.get("tfr_provision", 0) +  # Negative in PDF
-            record.get("other_provisions", 0) +  # Negative in PDF
-            record.get("non_current_operating_liabilities", 0)  # Negative in PDF
-        )
-        record["net_invested_capital"] = round(net_invested_capital, 2)
-        
-        # 5. Calculate total_equity (PATRIMONIO NETTO)
-        total_equity = (
-            record.get("share_capital", 0) +
-            record.get("reserves", 0) +
-            record.get("profit_loss", 0)
-        )
-        record["total_equity"] = round(total_equity, 2)
-        
-        # 6. Calculate net_financial_debt (INDEBITAMENTO FINANZIARIO NETTO)
-        # Using exact formula from PDF
-        net_financial_debt = (
-            record.get("short_term_bank_debt", 0) +
-            record.get("other_short_term_financial_debt", 0) +
-            record.get("long_term_bank_debt", 0) +
-            record.get("other_long_term_financial_debt", 0) +
-            record.get("shareholder_financing", 0) +
-            record.get("leasing_debt", 0) +
-            record.get("financial_receivables", 0) +  # This subtracts in calculation
-            record.get("cash_bank_accounts", 0)  # This subtracts in calculation (negative in PDF)
-        )
-        record["net_financial_debt"] = round(net_financial_debt, 2)
-        
-        # 7. Calculate total_funding_sources (FONTI DI FINANZIAMENTO)
-        total_funding_sources = record["total_equity"] + record["net_financial_debt"]
-        record["total_funding_sources"] = round(total_funding_sources, 2)
-        
-        # 8. Force balance: total_funding_sources should equal net_invested_capital
-        if abs(record["total_funding_sources"] - record["net_invested_capital"]) > 1.0:
-            # Adjust reserves to balance the equation
-            adjustment = record["net_invested_capital"] - record["total_funding_sources"]
-            record["reserves"] = round(record.get("reserves", 0) + adjustment, 2)
-            # Recalculate equity and funding sources
-            record["total_equity"] = round(
-                record.get("share_capital", 0) + 
-                record["reserves"] + 
-                record.get("profit_loss", 0), 2
-            )
-            record["total_funding_sources"] = round(record["total_equity"] + record["net_financial_debt"], 2)
-        
-        return record
-    
 
     def _fix_single_balance_sheet_record(self, record: Dict) -> Dict:
         """Fix calculations for balance sheet using exact table structure"""
@@ -568,13 +539,12 @@ class FinancialValidator:
         
         return record
 
-    
     def validate_and_fix_cash_flow(self, cash_flow_data: Dict) -> Dict:
         """Validate and fix cash flow calculations with enhanced logic"""
         try:
             if "data" not in cash_flow_data:
                 return cash_flow_data
-                
+            
             fixed_data = []
             cumulative_cash = 0  # Track cumulative cash position
             
@@ -611,7 +581,47 @@ class FinancialValidator:
         except Exception as e:
             logger.error(f"Error validating cash flow: {str(e)}")
             return cash_flow_data
-    
+
+    def validate_and_fix_debt_structure(self, debt_data: Dict) -> Dict:
+        """Validate and fix debt structure calculations"""
+        try:
+            if "data" not in debt_data:
+                return debt_data
+            
+            fixed_data = []
+            previous_debt = 0
+            
+            for record in debt_data["data"]:
+                fixed_record = record.copy()
+                year = fixed_record.get("year", 0)
+                
+                # Validate debt reduction logic
+                if year == 0:
+                    previous_debt = fixed_record.get("outstanding_debt", 0)
+                else:
+                    # Outstanding debt should equal previous debt minus repayment
+                    expected_debt = max(0, previous_debt - fixed_record.get("repayment", 0))
+                    current_debt = fixed_record.get("outstanding_debt", 0)
+                    
+                    # Only correct if there's a significant discrepancy
+                    if abs(current_debt - expected_debt) > 100:  # Allow for small rounding differences
+                        ratio = expected_debt / max(previous_debt, 1)  # Avoid division by zero
+                        # Log the correction for debugging
+                        logger.warning(f"Correcting debt for year {year}: {current_debt} -> {expected_debt} (ratio: {ratio:.2f})")
+                        fixed_record["outstanding_debt"] = round(expected_debt, 2)
+                    
+                    previous_debt = fixed_record.get("outstanding_debt", 0)
+                
+                fixed_data.append(fixed_record)
+            
+            return {
+                "data": fixed_data,
+                "analysis": debt_data.get("analysis", "Struttura del debito validata e corretta")
+            }
+        except Exception as e:
+            logger.error(f"Error validating debt structure: {str(e)}")
+            return debt_data
+
     def validate_financial_consistency(self, all_financial_data: Dict) -> Dict:
         """Validate consistency across all financial statements"""
         try:
@@ -644,11 +654,9 @@ class FinancialValidator:
                         logger.warning(f"Net income inconsistency in year {year}: P&L={pl_net_income}, BS={bs_profit_loss}")
             
             return all_financial_data
-            
         except Exception as e:
             logger.error(f"Error in financial consistency check: {str(e)}")
             return all_financial_data
-    
 
     def _get_value_for_year(self, data: List[Dict], year: int, field: str) -> Optional[float]:
         """Get value for specific year and field"""
@@ -656,6 +664,7 @@ class FinancialValidator:
             if record.get("year") == year and field in record:
                 return record[field]
         return None
+
 
 # -------------------------------------------------
 # ENHANCED BUSINESS PLAN SERVICE WITH VALIDATION
@@ -668,11 +677,11 @@ class BusinessPlanService:
         self.max_retries = 3
 
     async def generate_business_plan(
-    self,
-    uploaded_file: Optional[List[Any]] = None,
-    user_input: List[Any] = None,
-    user_id: str = None
-) -> Dict:
+        self,
+        uploaded_file: Optional[List[Any]] = None,
+        user_input: List[Any] = None,
+        user_id: str = None
+    ) -> Dict:
         """Orchestrate generation of the full business plan and return structured result."""
         try:
             # Convert tuples to lists if necessary
@@ -680,17 +689,22 @@ class BusinessPlanService:
                 uploaded_file = list(uploaded_file)
             if user_input and isinstance(user_input, tuple):
                 user_input = list(user_input)
-                
+            
             # Build context
             context: Dict[str, Any] = {}
             files_data = await self._process_uploaded_files(uploaded_file)
             context["extracted_text"] = files_data.get("text", "")
             context["extracted_financial_data"] = files_data.get("financial_data", {})
+            
+            # Log extracted financial data for debugging
+            if context["extracted_financial_data"]:
+                logger.info(f"Extracted financial data to be used for Year 0: {context['extracted_financial_data']}")
+            
             context["user_input"] = self._process_user_input(user_input or [])
-
+            
             previous_sections: Dict[str, Any] = {}
             business_plan_data: Dict[str, Any] = {}
-
+            
             # Generate sections in defined order
             for section_key, schema in self.section_schemas.items():
                 try:
@@ -710,18 +724,26 @@ class BusinessPlanService:
                     else:
                         # For financial sections, return proper dictionary structure
                         business_plan_data[section_key] = self._get_fallback_financial_data(section_key, schema)
-
+            
             # Final structure and consistency checks
             structured = await self._validate_and_structure_plan(business_plan_data, context)
+            
+            # Log what was actually used for Year 0 in each financial section
+            financial_sections = ["cashFlowAnalysis", "profitLossProjection", "balanceSheet", "debtStructure", "ratiosAnalysis"]
+            for section in financial_sections:
+                section_data = business_plan_data.get(section, {})
+                if isinstance(section_data, dict) and "data" in section_data:
+                    year_0_data = next((item for item in section_data["data"] if item.get("year") == 0), None)
+                    if year_0_data:
+                        logger.info(f"Year 0 data used in {section}: {year_0_data}")
             
             # Run final consistency check (but don't fail if it errors)
             try:
                 self.validator.validate_financial_consistency(business_plan_data)
             except Exception as e:
                 logger.warning(f"Final consistency validation warning: {str(e)}")
-
+            
             return structured
-
         except Exception as e:
             logger.error(f"Error in generate_business_plan orchestration: {e}")
             logger.error(f"Error type: {type(e)}")
@@ -730,142 +752,6 @@ class BusinessPlanService:
             logger.error(f"Traceback: {traceback.format_exc()}")
             return {"error": "Unable to generate business plan at this time."}
 
-    # ... [keep all existing methods until _generate_financial_section] ...
-
-    async def _generate_financial_section(
-        self,
-        section_key: str,
-        context: Dict,
-        previous_sections: Dict
-    ) -> Dict:
-        """Generate financial section with validation and retries"""
-        schema = self.section_schemas[section_key]
-        
-        for attempt in range(self.max_retries):
-            try:
-                prompt = self._build_financial_prompt(section_key, schema, context, previous_sections)
-                
-                response = await self.client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "Sei un analista finanziario esperto in principi contabili italiani (OIC). Genera proiezioni finanziarie realistiche e analisi accurate in italiano. Rispondi SOLO con un oggetto JSON valido che corrisponde esattamente allo schema richiesto."
-                        },
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=0.3,
-                    max_tokens=3000,
-                    response_format={"type": "json_object"}
-                )
-
-                content = response.choices[0].message.content.strip()
-                financial_data = json.loads(content)
-                self._validate_financial_structure(financial_data, schema)
-                
-                # Apply validation and fixes
-                validated_data = await self._apply_financial_validation(section_key, financial_data)
-                
-                # Check if we need to retry
-                if attempt < self.max_retries - 1 and self._needs_retry(section_key, validated_data):
-                    logger.warning(f"Retrying {section_key} generation, attempt {attempt + 2}")
-                    continue
-                
-                return validated_data
-                
-            except Exception as e:
-                logger.error(f"Error generating {section_key} (attempt {attempt + 1}): {str(e)}")
-                if attempt == self.max_retries - 1:
-                    # Return fallback data on final attempt
-                    return self._get_fallback_financial_data(section_key, schema)
-        
-        return self._get_fallback_financial_data(section_key, schema)
-    
-    async def _apply_financial_validation(self, section_key: str, financial_data: Dict) -> Dict:
-        """Apply appropriate validation based on section type"""
-        if section_key == "profitLossProjection":
-            return self.validator.validate_and_fix_profit_loss(financial_data)
-        elif section_key == "balanceSheet":
-            return self.validator.validate_and_fix_balance_sheet(financial_data)
-        elif section_key == "cashFlowAnalysis":
-            return self.validator.validate_and_fix_cash_flow(financial_data)
-
-        elif section_key == "debtStructure":  # ADD THIS
-            return self.validator.validate_and_fix_debt_structure(financial_data)
-        else:
-            return financial_data
-    
-    def _needs_retry(self, section_key: str, validated_data: Dict) -> bool:
-        """Determine if we need to retry generation due to data issues"""
-        if "data" not in validated_data or not validated_data["data"]:
-            return True
-            
-        # Check for obvious data issues that require regeneration
-        if section_key == "profitLossProjection":
-            for record in validated_data["data"]:
-                # If net income is negative for all years, might need retry
-                if record.get("risultato_netto", 0) < -100000:  # Large negative values
-                    return True
-                    
-        return False
-    
-    def _get_fallback_financial_data(self, section_key: str, schema: Dict) -> Dict:
-        """Provide fallback data when generation fails"""
-        logger.warning(f"Using fallback data for {section_key}")
-        
-        if "example" in schema:
-            return schema["example"]
-        
-        # Basic fallback structure
-        return {
-            "data": [],
-            "analysis": "Dati non disponibili a causa di errori di generazione."
-        }
-
-    # Modify the final structuring to include cross-statement validation
-    async def _validate_and_structure_plan(self, business_plan_data: Dict, context: Dict) -> Dict:
-        """Convert every financial section to the requested wrapper format with final validation"""
-        structured_plan = {
-            "executiveSummary": business_plan_data.get("executiveSummary", ""),
-            "businessOverview": business_plan_data.get("businessOverview", ""),
-            "marketAnalysis": business_plan_data.get("marketAnalysis", ""),
-            "businessModel": business_plan_data.get("businessModel", ""),
-            "marketingSalesStrategy": business_plan_data.get("marketingSalesStrategy", ""),
-            "managementTeam": business_plan_data.get("managementTeam", ""),
-        }
-
-        # Helper to wrap a financial section
-        def wrap(section_data: Any) -> List[Dict[str, Any]]:
-            if isinstance(section_data, dict) and "data" in section_data and "analysis" in section_data:
-                return [section_data]
-            return [{"data": [], "analysis": "Dati non disponibili."}]
-
-        # Apply final cross-statement validation
-        financial_sections = [
-            #"financialHighlights", 
-            "cashFlowAnalysis", "profitLossProjection",
-            "balanceSheet", #"netFinancialPosition", 
-            "debtStructure",
-            #"keyRatios", 
-            #"financialAnalysis", 
-            "ratiosAnalysis"
-        ]
-        
-        financial_data_dict = {}
-        for section_key in financial_sections:
-            section_data = business_plan_data.get(section_key)
-            financial_data_dict[section_key] = section_data
-            structured_plan[section_key] = wrap(section_data)
-        
-        # Run final consistency check
-        self.validator.validate_financial_consistency(financial_data_dict)
-        
-        return structured_plan
-
-
-    # -------------------------------------------------
-    # 3.  SECTION GENERATORS
-    # -------------------------------------------------
     async def _generate_section(
         self,
         section_key: str,
@@ -874,7 +760,6 @@ class BusinessPlanService:
     ) -> str:
         schema = self.section_schemas[section_key]
         prompt = self._build_section_prompt(section_key, schema, context, previous_sections)
-
         response = await self.client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -887,9 +772,7 @@ class BusinessPlanService:
             temperature=0.2,
             max_tokens=2000
         )
-
         content = response.choices[0].message.content.strip()
-
         # Optional word-count re-generation
         if "min_words" in schema:
             word_count = len(content.split())
@@ -903,30 +786,92 @@ class BusinessPlanService:
         context: Dict,
         previous_sections: Dict
     ) -> Dict:
+        """Generate financial section with validation and retries"""
         schema = self.section_schemas[section_key]
-        prompt = self._build_financial_prompt(section_key, schema, context, previous_sections)
+        for attempt in range(self.max_retries):
+            try:
+                prompt = self._build_financial_prompt(section_key, schema, context, previous_sections)
+                response = await self.client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "Sei un analista finanziario esperto in principi contabili italiani (OIC). Genera proiezioni finanziarie realistiche e analisi accurate in italiano. Rispondi SOLO con un oggetto JSON valido che corrisponde esattamente allo schema richiesto."
+                        },
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.3,
+                    max_tokens=3000,
+                    response_format={"type": "json_object"}
+                )
+                content = response.choices[0].message.content.strip()
+                financial_data = json.loads(content)
+                self._validate_financial_structure(financial_data, schema)
+                
+                # Apply Year 0 validation using extracted data
+                if context.get("extracted_financial_data"):
+                    financial_data = self.validator.enforce_year_0_from_extracted_data(
+                        financial_data, 
+                        context["extracted_financial_data"]
+                    )
+                
+                # Apply other validation and fixes
+                validated_data = await self._apply_financial_validation(section_key, financial_data)
+                
+                # Check if we need to retry
+                if attempt < self.max_retries - 1 and self._needs_retry(section_key, validated_data):
+                    logger.warning(f"Retrying {section_key} generation, attempt {attempt + 2}")
+                    continue
+                
+                return validated_data
+            except Exception as e:
+                logger.error(f"Error generating {section_key} (attempt {attempt + 1}): {str(e)}")
+                if attempt == self.max_retries - 1:
+                    # Return fallback data on final attempt
+                    return self._get_fallback_financial_data(section_key, schema)
+        
+        return self._get_fallback_financial_data(section_key, schema)
 
-        response = await self.client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Sei un analista finanziario esperto in principi contabili italiani (OIC). Genera proiezioni finanziarie realistiche e analisi accurate in italiano. Rispondi SOLO con un oggetto JSON valido che corrisponde esattamente allo schema richiesto."
-                },
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.3,
-            max_tokens=3000,
-            response_format={"type": "json_object"}
-        )
+    async def _apply_financial_validation(self, section_key: str, financial_data: Dict) -> Dict:
+        """Apply appropriate validation based on section type"""
+        if section_key == "profitLossProjection":
+            return self.validator.validate_and_fix_profit_loss(financial_data)
+        elif section_key == "balanceSheet":
+            return self.validator.validate_and_fix_balance_sheet(financial_data)
+        elif section_key == "cashFlowAnalysis":
+            return self.validator.validate_and_fix_cash_flow(financial_data)
+        elif section_key == "debtStructure":
+            return self.validator.validate_and_fix_debt_structure(financial_data)
+        else:
+            return financial_data
 
-        content = response.choices[0].message.content.strip()
-        financial_data = json.loads(content)
-        self._validate_financial_structure(financial_data, schema)
-        return financial_data
+    def _needs_retry(self, section_key: str, validated_data: Dict) -> bool:
+        """Determine if we need to retry generation due to data issues"""
+        if "data" not in validated_data or not validated_data["data"]:
+            return True
+        
+        # Check for obvious data issues that require regeneration
+        if section_key == "profitLossProjection":
+            for record in validated_data["data"]:
+                # If net income is negative for all years, might need retry
+                if record.get("utile_netto", 0) < -100000:  # Large negative values
+                    return True
+        
+        return False
+
+    def _get_fallback_financial_data(self, section_key: str, schema: Dict) -> Dict:
+        """Provide fallback data when generation fails"""
+        logger.warning(f"Using fallback data for {section_key}")
+        if "example" in schema:
+            return schema["example"]
+        # Basic fallback structure
+        return {
+            "data": [],
+            "analysis": "Dati non disponibili a causa di errori di generazione."
+        }
 
     # -------------------------------------------------
-    # 5.  PROMPT BUILDERS
+    # 5. PROMPT BUILDERS
     # -------------------------------------------------
     def _build_section_prompt(
         self,
@@ -942,22 +887,22 @@ class BusinessPlanService:
             "VALUTA: Euro",
             f"MINIMO PAROLE: {schema.get('min_words', 300)}"
         ]
-
+        
         if context.get("user_input"):
             prompt_parts.append(f"INPUT UTENTE: {context['user_input']}")
-
+        
         if context.get("extracted_financial_data"):
             fin_data = context['extracted_financial_data']
             prompt_parts.append(f"DATI FINANZIARI ESTRATTI: {json.dumps(fin_data, indent=2)}")
-
+        
         if context.get("extracted_text"):
             prompt_parts.append(f"TESTO ESTRATTO DA DOCUMENTI: {context['extracted_text'][:1000]}...")
-
+        
         for prev_key, prev_content in previous_sections.items():
             if isinstance(prev_content, str) and prev_content:
                 preview = prev_content[:500] + "..." if len(prev_content) > 500 else prev_content
                 prompt_parts.append(f"CONTESTO DA {prev_key.upper()}: {preview}")
-
+        
         prompt_parts.extend([
             "ISTRUZIONI IMPORTANTI:",
             "1. Genera solo il contenuto della sezione richiesta",
@@ -966,7 +911,8 @@ class BusinessPlanService:
             "4. Assicurati di raggiungere il numero minimo di parole",
             "5. Basati sul contesto fornito ma non ripetere informazioni"
         ])
-        return "\n\n".join(prompt_parts)
+        
+        return "\n".join(prompt_parts)
 
     def _build_financial_prompt(self, section_key: str, schema: Dict, context: Dict, previous_sections: Dict) -> str:
         prompt_parts = [
@@ -980,7 +926,17 @@ class BusinessPlanService:
             "ANNI RICHIESTI: Anno 0 (situazione corrente) + Anni 1, 2, 3, 4, 5 (proiezioni)",
             "**NON OMETTERE NESSUN ANNO. TUTTI I 6 ANNI DEVONO ESSERE PRESENTI.**"
         ]
-
+        
+        # Add explicit instructions about Year 0 data usage
+        if context.get("extracted_financial_data"):
+            fin_data = context['extracted_financial_data']
+            prompt_parts.extend([
+                "**DATO FONDAMENTALE PER ANNO 0:**",
+                f"Utilizza ESATTAMENTE questi dati estratti per l'Anno 0: {json.dumps(fin_data, indent=2)}",
+                "**IMPORTANTE:** I valori per l'Anno 0 DEVONO corrispondere PRECISAMENTE ai dati estratti. Non modificarli o inventarli.",
+                "**REGOLA FONDAMENTALE:** Se un dato finanziario è presente nei dati estratti, DEVE essere usato per l'Anno 0 senza modifiche. Solo gli anni 1-5 sono proiezioni."
+            ])
+        
         if section_key == "cashFlowAnalysis":
             prompt_parts.extend([
                 "ISTRUZIONI SPECIFICHE PER ANALISI FLUSSO DI CASSA:",
@@ -989,8 +945,45 @@ class BusinessPlanService:
                 "3. Financing = Flusso di cassa finanziario (può essere positivo o negativo)",
                 "4. Net Cash = Somma dei tre flussi (Operating + Investing + Financing)",
                 "5. Anno 0 = situazione corrente basata sui dati forniti",
-                "6. Anni 1-5 = proiezioni realistiche e coerenti"
-            ]),
+                "6. Anni 1-5 = proiezioni realistiche e coerenti",
+                "ISTRUZIONI SPECIFICHE PER FLUSSO DI CASSA (SEGUIRE ESATTAMENTE QUESTA STRUTTURA):",
+                "SEZIONE A - ATTIVITÀ OPERATIVE:",
+                "  • Utile(Perdita) d'esercizio = valore dal conto economico",
+                "  • (+) Ammortamenti e svalutazioni = somma ammortamenti immateriali + materiali",
+                "  • (+) Variazione crediti verso clienti = -(crediti commerciali anno N - anno N-1)",
+                "  • (+) Variazione debiti verso fornitori = (debiti vs fornitori anno N - anno N-1)",
+                "SEZIONE B - ATTIVITÀ DI INVESTIMENTO:",
+                "  • (-) Acquisto immobilizzazioni materiali = CAPEX per impianti/macchinari",
+                "  • (-) Acquisto immobilizzazioni immateriali = CAPEX per software/brevetti",
+                "SEZIONE C - ATTIVITÀ DI FINANZIAMENTO:",
+                "  • (+) Aumento/riduzione capitale sociale = variazione equity",
+                "  • (+) Prestiti/mutui ricevuti = nuovo finanziamento bancario",
+                "  • (-) Rimborso prestiti/mutui = quota capitale del piano di ammortamento",
+                "CALCOLI FINALI:",
+                "  • Variazione netta di cassa = A + B + C",
+                "  • Cassa iniziale = cassa finale anno precedente",
+                "  • Cassa finale = cassa iniziale + variazione netta"
+            ])
+        
+        if section_key == "ratiosAnalysis":
+            prompt_parts.extend([
+                "CALCOLARE ESATTAMENTE QUESTI 10 RAPPORTI FINANZIARI CON LE FORMULE SPECIFICATE:",
+                "1. ROI = EBIT / Capitale investito × 100 (%) | Benchmark: >10% ottimo, 6-10% buono",
+                "2. ROE = Utile netto / Patrimonio netto × 100 (%) | Benchmark: >12-15% buono",
+                "3. ROS = EBIT / Ricavi × 100 (%) | Benchmark: >10% ottimo, 5-10% sano",
+                "4. EBITDA Margin = EBITDA / Ricavi × 100 (%) | Benchmark: >20% ottimo",
+                "5. Current Ratio = Attivo corrente / Passivo corrente | Benchmark: >1.2 buono",
+                "6. Cash Ratio = Liquidità / Passivo corrente | Benchmark: >0.2-0.3 discreto",
+                "7. PFN/EBITDA = Posizione Finanziaria Netta / EBITDA | Benchmark: <2 ottimo", 
+                "8. Debt/Equity = Debiti totali / Patrimonio netto | Benchmark: <1 buono",
+                "9. PFN/Equity = PFN / Equity | Benchmark: <1 equilibrato",
+                "10. DSCR = Cash Flow operativo / Rata debito | Benchmark: ≥1.2 richiesto da banche",
+                "PER OGNI RAPPORTO, INCLUDERE:",
+                "  • Calcolo matematico preciso",
+                "  • Valore benchmark di riferimento",
+                "  • Interpretazione qualitativa (ottimo/buono/sufficiente/critico)",
+                "  • Trend storico e proiezioni future"
+            ])
         
         if section_key == "profitLossProjection":
             prompt_parts.extend([
@@ -998,16 +991,22 @@ class BusinessPlanService:
                 "1. Anno 0 = dati correnti (se disponibili) o valori di partenza",
                 "2. Anni 1-5 = proiezioni con crescita realistica",
                 "3. Tutti i calcoli devono essere matematicamente coerenti",
-                "4. Le imposte devono essere calcolate al 24% sull'EBIT positivo"
+                "4. Le imposte devono essere calcolate al 24% sull'EBIT positivo",
+                "5. COGS must be 30% of revenue",
+                "6. Services must be 8% of revenue",
+                "7. Rentals must be 1% of revenue"
             ])
+        
         if section_key == "balanceSheet":
             prompt_parts.extend([
                 "ISTRUZIONI SPECIFICHE STATO PATRIMONIALE:",
                 "1. Anno 0 = situazione patrimoniale iniziale",
                 "2. Attivo = Passivo + Patrimonio Netto per ogni anno",
-                "3. Gli utili accumulati devono crescere coerentemente con il conto economico"
-                ])
-
+                "3. Gli utili accumulati devono crescere coerentemente con il conto economico",
+                "4. Crediti commerciali = Ricavi annuali ÷ 12",
+                "5. Disponibilità liquide calculations as detailed in PDF"
+            ])
+        
         if section_key == "debtStructure":
             prompt_parts.extend([
                 "ISTRUZIONI SPECIFICHE PER STRUTTURA DEL DEBITO:",
@@ -1015,30 +1014,43 @@ class BusinessPlanService:
                 "2. Anni 1-5 = proiezioni",
                 "3. Interest rate in percentuale (es. 4.5 per 4.5%)",
                 "4. Outstanding debt deve diminuire progressivamente",
-                "5. Se il debito viene estinto prima dell'anno 5, impostare i valori successivi a 0"
+                "5. Se il debito viene estinto prima dell'anno 5, impostare i valori successivi a 0",
+                "STRUTTURA DETTAGLIATA DEL DEBITO (INCLUDERE TUTTI QUESTI COMPONENTI):",
+                "• Debito bancario a medio-lungo termine = mutuo principale",
+                "• Quota capitale = parte del rimborso che riduce il debito residuo",
+                "• Quota interessi = costo finanziario annuo",
+                "• Debito soci = prestiti da shareholder (specificare se a interesse zero)",
+                "• Debito breve termine = quota da rimborsare entro 12 mesi",
+                "• PFN (Posizione Finanziaria Netta) = Debiti totali - Disponibilità liquide",
+                "• PIANO DI AMMORTAMENTO:",
+                "  - Anno 0: debito iniziale + nuovo finanziamento",
+                "  - Anni 1-5: rata costante con quota capitale crescente e quota interessi decrescente",
+                "  - Calcolare tasso interesse esatto (es. 5%) su debito residuo"
             ])
-
+        
         if context.get("extracted_financial_data"):
             fin_data = context['extracted_financial_data']
             prompt_parts.append(f"DATI FINANZIARI ESTRATTI (usare come base per Anno 0): {json.dumps(fin_data, indent=2)}")
-
+        
         if context.get("user_input"):
             prompt_parts.append(f"IDEA BUSINESS: {context['user_input']}")
-
+        
         financial_context = {}
         for prev_key, prev_content in previous_sections.items():
             if any(k in prev_key.lower() for k in ['financial', 'ratio', 'cash', 'debt', 'balance', 'profit']):
                 financial_context[prev_key] = prev_content
+        
         if financial_context:
             prompt_parts.append(f"CONTESTO FINANZIARIO PRECEDENTE: {json.dumps(financial_context, indent=2)}")
-
+        
         business_context = {}
         for prev_key, prev_content in previous_sections.items():
             if isinstance(prev_content, str) and not any(k in prev_key.lower() for k in ['financial', 'ratio', 'cash', 'debt', 'balance']):
                 business_context[prev_key] = prev_content[:500] + "..." if len(prev_content) > 500 else prev_content
+        
         if business_context:
             prompt_parts.append(f"CONTESTO BUSINESS: {json.dumps(business_context, indent=2)}")
-
+        
         prompt_parts.extend([
             "ISTRUZIONI CRITICHE:",
             "1. Usa i dati estratti per l'Anno 0 (se disponibili)",
@@ -1050,39 +1062,42 @@ class BusinessPlanService:
             "7. Per l'analisi, fornisci un commento interpretativo in italiano",
             "8. RESTITUISCI SOLO JSON VALIDO, NESSUN ALTRO TESTO"
         ])
-        return "\n\n".join(prompt_parts)
+        
+        return "\n".join(prompt_parts)
 
     # -------------------------------------------------
-    # 6.  FILE & INPUT HELPERS
+    # 6. FILE & INPUT HELPERS
     # -------------------------------------------------
     async def _process_uploaded_files(self, uploaded_files: Optional[List[Any]]) -> Dict:
         extracted_data = {"text": "", "financial_data": {}}
         if not uploaded_files:
             return extracted_data
-
+        
         try:
             for file_data in uploaded_files:
                 if hasattr(file_data, 'read') and hasattr(file_data, 'filename'):
                     file_content = await file_data.read()
                     if file_data.filename.lower().endswith('.pdf'):
                         text, pages, metadata, financial_data = extract_text_from_pdf(file_content, "company_extract")
-                        extracted_data["text"] += f"\n\n{text}"
+                        extracted_data["text"] += f"\n{text}"
                         if financial_data:
                             extracted_data["financial_data"].update(financial_data)
                 elif isinstance(file_data, dict):
                     if 'content' in file_data:
-                        extracted_data["text"] += f"\n\n{file_data['content']}"
+                        extracted_data["text"] += f"\n{file_data['content']}"
                     if 'financial_data' in file_data:
                         extracted_data["financial_data"].update(file_data['financial_data'])
+            
             logger.info(f"Extracted {len(extracted_data['text'])} chars and {len(extracted_data['financial_data'])} financial data points")
         except Exception as e:
             logger.error(f"Error processing uploaded files: {str(e)}")
-
+        
         return extracted_data
 
     def _process_user_input(self, user_input: List[Any]) -> str:
         if not user_input:
             return ""
+        
         processed = []
         for item in user_input:
             if isinstance(item, str):
@@ -1096,72 +1111,46 @@ class BusinessPlanService:
                     processed.append(json.dumps(item, ensure_ascii=False))
             else:
                 processed.append(str(item))
+        
         return " ".join(processed)
 
-
-    def validate_and_fix_debt_structure(self, debt_data: Dict) -> Dict:
-        """Validate and fix debt structure calculations"""
-        try:
-            if "data" not in debt_data:
-                return debt_data
-                
-            fixed_data = []
-            previous_debt = 0
-            
-            for record in debt_data["data"]:
-                fixed_record = record.copy()
-                year = fixed_record.get("year", 0)
-                
-                # Validate debt reduction logic
-                if year == 0:
-                    previous_debt = fixed_record.get("outstanding_debt", 0)
-                else:
-                    # Outstanding debt should equal previous debt minus repayment
-                    expected_debt = max(0, previous_debt - fixed_record.get("repayment", 0))
-                    if abs(fixed_record.get("outstanding_debt", 0) - expected_debt) > 100:
-                        # Auto-correct if discrepancy is significant
-                        fixed_record["outstanding_debt"] = round(expected_debt, 2)
-                    
-                    previous_debt = fixed_record.get("outstanding_debt", 0)
-                
-                fixed_data.append(fixed_record)
-            
-            return {
-                "data": fixed_data,
-                "analysis": debt_data.get("analysis", "Struttura del debito validata e corretta")
-            }
-        except Exception as e:
-            logger.error(f"Error validating debt structure: {str(e)}")
-            return debt_data
-    
     def _validate_financial_structure(self, financial_data: Dict, schema: Dict):
         """Validate that financial data matches the expected schema"""
         if not isinstance(financial_data, dict):
             raise ValueError("Financial data must be a dictionary")
-            
+        
         if "data" not in financial_data or "analysis" not in financial_data:
             raise ValueError("Financial data must contain 'data' and 'analysis' keys")
-            
+        
         if not isinstance(financial_data["analysis"], str):
             raise ValueError("Analysis must be a string")
-            
+        
         if not isinstance(financial_data["data"], list):
             raise ValueError("Data must be a list")
-            
-        if financial_data["data"] and not isinstance(financial_data["data"][0], dict):
+        
+        if not financial_data["data"]:
+            raise ValueError("Data list cannot be empty")
+        
+        if not isinstance(financial_data["data"][0], dict):
             raise ValueError("Data items must be dictionaries")
-            
-        if financial_data["data"] and "year" not in financial_data["data"][0]:
+        
+        if "year" not in financial_data["data"][0]:
             raise ValueError("Data items must contain 'year' field")
+        
+        # Check that all 6 years are present
+        years = [item.get("year") for item in financial_data["data"]]
+        required_years = [0, 1, 2, 3, 4, 5]
+        missing_years = [y for y in required_years if y not in years]
+        
+        if missing_years:
+            raise ValueError(f"Missing required years: {missing_years}. All years 0-5 must be present.")
 
     async def _regenerate_with_word_count(self, section_key: str, schema: Dict, current_content: str, original_prompt: str) -> str:
         try:
             enhancement_prompt = f"""
 {original_prompt}
-
 CONTENUTO ATTUALMENTE GENERATO (insufficiente):
 {current_content}
-
 Il contenuto sopra ha solo {len(current_content.split())} parole, ma ne servono almeno {schema['min_words']}.
 Per favore, espandi significativamente il contenuto mantenendo qualità e rilevanza.
 """
@@ -1183,7 +1172,7 @@ Per favore, espandi significativamente il contenuto mantenendo qualità e rileva
             return current_content
 
     # -------------------------------------------------
-    # 7.  FINAL STRUCTURING – NEW WRAPPER FORMAT
+    # 7. FINAL STRUCTURING – NEW WRAPPER FORMAT
     # -------------------------------------------------
     async def _validate_and_structure_plan(self, business_plan_data: Dict, context: Dict) -> Dict:
         """
@@ -1197,30 +1186,24 @@ Per favore, espandi significativamente il contenuto mantenendo qualità e rileva
             "businessModel": business_plan_data.get("businessModel", ""),
             "marketingSalesStrategy": business_plan_data.get("marketingSalesStrategy", ""),
             "managementTeam": business_plan_data.get("managementTeam", ""),
-            # "sector_strategy": business_plan_data.get("marketAnalysis", ""),
-            # "funding_sources": "Da definire in base alle necessità di finanziamento"
         }
-
+        
         # Helper to wrap a financial section
         def wrap(section_data: Any) -> List[Dict[str, Any]]:
             if isinstance(section_data, dict) and "data" in section_data and "analysis" in section_data:
                 return [section_data]
             return [{"data": [], "analysis": "Dati non disponibili."}]
-
-
+        
         structured_plan["cashFlowAnalysis"] = wrap(business_plan_data.get("cashFlowAnalysis"))
         structured_plan["profitLossProjection"] = wrap(business_plan_data.get("profitLossProjection"))
         structured_plan["balanceSheet"] = wrap(business_plan_data.get("balanceSheet"))
-
         structured_plan["debtStructure"] = wrap(business_plan_data.get("debtStructure"))
-
         structured_plan["ratiosAnalysis"] = wrap(business_plan_data.get("ratiosAnalysis"))
-        # structured_plan.setdefault("operating_cost_breakdown", [])
-
+        
         return structured_plan
 
 # -------------------------------------------------
-# 8.  FAST-API ENTRY-POINT FUNCTIONS (unchanged)
+# 8. FAST-API ENTRY-POINT FUNCTIONS
 # -------------------------------------------------
 async def generate_business_plan(
     uploaded_file: Optional[List[Any]] = None,
@@ -1235,20 +1218,14 @@ You are an expert business plan consultant. Generate 4 different possible profes
 Keep each answer concise (Less than 10 words).
 ALWAYS MAKE SURE THAT THE SUGGESTION WILL BE IN ITALIAN LANGUAGE.
 Return the answers in a clean JSON array format.
-
 Question: {question}
-
 Return ONLY a valid JSON array of strings, no additional text or explanations.
 """
-
-
 
 async def generate_suggestions(question: str) -> List[str]:
     """Generate suggestion options for business plan questions."""
     client = get_openai_client()
-
     messages = [{"role": "system", "content": SUGGESTION_PROMPT.format(question=question)}]
-
     try:
         response = await client.chat.completions.create(
             messages=messages,
@@ -1256,21 +1233,15 @@ async def generate_suggestions(question: str) -> List[str]:
             temperature=0.3,
             max_tokens=100
         )
-        
         content = response.choices[0].message.content.strip()
-        
         # Clean content
         if content.startswith("```"):
             content = re.sub(r"^```(json)?\s*", "", content)
             content = re.sub(r"\s*```$", "", content)
-        
         suggestions = json.loads(content)
-        
         if not isinstance(suggestions, list):
             raise ValueError("Expected a list of strings")
-            
         return suggestions[:4]
-        
     except Exception as e:
         logger.error(f"Error generating suggestions: {e}")
         return [

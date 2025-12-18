@@ -5,10 +5,11 @@ python-dotenv
 pydantic-settings
 requests
 httpx
-pytesseract 
-pdf2image 
-PyPDF2 
+pytesseract
+pdf2image
+PyPDF2
 python-multipart
 tenacity
 openai
-pydantic-settings
+pandas
+pdfminer.six
